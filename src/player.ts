@@ -7,6 +7,8 @@ export {
   type FullscreenProps,
   mountPlayer,
   type MountResult,
+  AdSlot,
+  type AdSlotProps,
   applyTheme,
   pickDefaultTheme,
   prefersDark,

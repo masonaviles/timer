@@ -31,6 +31,10 @@
       "types": "./dist/builder.d.ts",
       "import": "./dist/builder.js"
     },
+    "./ads": {
+      "types": "./dist/ads/index.d.ts",
+      "import": "./dist/ads/index.js"
+    },
     "./styles.css": "./dist/view/styles.css"
   },
   "files": ["dist"],

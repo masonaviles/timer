@@ -5,18 +5,65 @@
 // (Astro routes replace this shell in Phase 5.)
 
 import { render } from 'preact';
-import { useEffect, useMemo, useState } from 'preact/hooks';
-import { createSampleTimer } from '../src/data/presets.js';
+import { useEffect, useMemo, useRef, useState } from 'preact/hooks';
+import { EXAMPLE_OFFERINGS } from '../src/ads/index.js';
+import { RETREAT_AMBER, createSampleTimer } from '../src/data/presets.js';
 import type { TimerConfig } from '../src/data/schema.js';
 import { TimerEngine } from '../src/engine/TimerEngine.js';
 import { LocalStorageRepository, resolvePlayerConfig } from '../src/persistence/index.js';
+import { AdSlot } from '../src/view/AdSlot.js';
 import { Builder } from '../src/view/Builder.js';
 import { Player } from '../src/view/Player.js';
+import { applyTheme } from '../src/view/theme.js';
 
 const repository = new LocalStorageRepository();
 
+function AdsDemo() {
+  const [consent, setConsent] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+  // The AdSlot's CSS reads theme tokens; outside a Player, apply a theme to the root.
+  useEffect(() => {
+    if (ref.current) applyTheme(ref.current, RETREAT_AMBER);
+  }, []);
+  const col = 'display:flex;flex-direction:column;gap:6px;width:280px';
+  const h =
+    'font:600 11px var(--font-mono);letter-spacing:.1em;text-transform:uppercase;color:var(--dim)';
+  return (
+    <div
+      class="cuestack"
+      ref={ref}
+      style="height:100%;align-items:center;justify-content:center;flex-direction:row;gap:28px;flex-wrap:wrap"
+    >
+      <div style={col}>
+        <div style={h}>selfPromo</div>
+        <AdSlot strategy={{ kind: 'selfPromo', offerings: EXAMPLE_OFFERINGS }} />
+      </div>
+      <div style={col}>
+        <div style={h}>network (consent: {consent ? 'granted' : 'denied'})</div>
+        <button
+          type="button"
+          class="cs-hbtn"
+          onClick={() => setConsent((c) => !c)}
+          style="align-self:flex-start"
+        >
+          {consent ? 'Revoke consent' : 'Grant consent'}
+        </button>
+        <AdSlot
+          strategy={{ kind: 'network', provider: 'adsense', slotId: 'demo-1' }}
+          consent={consent}
+        />
+      </div>
+      <div style={col}>
+        <div style={h}>none (clean)</div>
+        <AdSlot strategy={{ kind: 'none' }} />
+        <div style="font:11px var(--font-mono);color:var(--faint)">— renders nothing —</div>
+      </div>
+    </div>
+  );
+}
+
 function App() {
-  const [mode, setMode] = useState<'loading' | 'builder' | 'player'>('loading');
+  const [mode, setMode] = useState<'loading' | 'builder' | 'player' | 'ads'>('loading');
   const [config, setConfig] = useState<TimerConfig>(() => createSampleTimer());
   const [notice, setNotice] = useState<string | null>(null);
 
@@ -42,7 +89,7 @@ function App() {
 
   return (
     <>
-      {mode === 'builder' ? (
+      {mode === 'builder' && (
         <Builder
           initialConfig={config}
           repository={repository}
@@ -51,9 +98,9 @@ function App() {
             setMode('player');
           }}
         />
-      ) : (
-        <Player engine={engine} />
       )}
+      {mode === 'player' && <Player engine={engine} />}
+      {mode === 'ads' && <AdsDemo />}
 
       <div style={tab}>
         <button type="button" style={btn(mode === 'builder')} onClick={() => setMode('builder')}>
@@ -61,6 +108,9 @@ function App() {
         </button>
         <button type="button" style={btn(mode === 'player')} onClick={() => setMode('player')}>
           Player
+        </button>
+        <button type="button" style={btn(mode === 'ads')} onClick={() => setMode('ads')}>
+          Ads
         </button>
       </div>
 

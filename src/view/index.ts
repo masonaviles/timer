@@ -2,6 +2,7 @@
 // Importing anything here pulls in Preact + CSS — keep engine-only consumers on "./engine".
 export { Player, type PlayerProps } from './Player.js';
 export { Builder, type BuilderProps } from './Builder.js';
+export { AdSlot, type AdSlotProps } from './AdSlot.js';
 export { Fullscreen, type FullscreenProps } from './Fullscreen.js';
 export { mountPlayer, mountBuilder, type MountResult } from './mount.js';
 export { applyTheme, pickDefaultTheme, prefersDark } from './theme.js';

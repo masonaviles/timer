@@ -1,19 +1,76 @@
 ---
-// Placeholder ad slot — Phase 6 implements the pluggable strategy
-// (selfPromo | network | none). Ads live in the page SHELL, never inside the timer island,
-// so the tool stays reusable and ad-free by default (ADR-003).
+// Pluggable ad slot for the page SHELL (ADR-003). Strategy chosen per deployment:
+//   selfPromo (your offerings, no cookies) | network (consent-gated) | none (clean)
+// Ads live here in the shell, never inside the timer island, so the tool stays reusable.
+//
+// Copy into the consuming Astro site. Uses the framework-free "@masonaviles/cuestack/ads"
+// model — swap EXAMPLE_OFFERINGS for your real offerings (A3).
+import { EXAMPLE_OFFERINGS, resolveAd, type AdStrategy } from '@masonaviles/cuestack/ads';
+
 interface Props {
   id: string;
+  strategy?: AdStrategy;
+  /** Pass your cookie-banner consent state; only gates the `network` strategy. */
+  consent?: boolean;
 }
-const { id } = Astro.props;
+
+const {
+  id,
+  strategy = { kind: 'selfPromo', offerings: EXAMPLE_OFFERINGS },
+  consent = false,
+} = Astro.props;
+
+const render = resolveAd(strategy, consent);
 ---
 
-<aside class="ad-slot" data-slot={id}>
-  <!-- Phase 6: render <AdSlot strategy="selfPromo" offerings={...} /> here -->
-</aside>
+{render.kind === 'selfPromo' && (
+  <aside class="ad-slot" data-slot={id} aria-label="Sponsored">
+    <span class="ad-tag">Sponsored</span>
+    {render.offerings.map((o) => (
+      <a class="ad-card" href={o.href}>
+        <strong>{o.title}</strong>
+        <span>{o.blurb}</span>
+        {o.cta && <em>{o.cta} →</em>}
+      </a>
+    ))}
+  </aside>
+)}
+
+{render.kind === 'network' && (
+  <aside class="ad-slot" data-slot={id} aria-label="Advertisement">
+    {/* Inject the provider script here (it only renders post-consent). */}
+    <ins class="adsbygoogle" data-ad-slot={render.slotId}></ins>
+  </aside>
+)}
+
+{/* render.kind === 'empty' -> nothing */}
 
 <style>
   .ad-slot {
     min-height: 90px; /* reserve space to avoid layout shift */
+    display: block;
+  }
+  .ad-tag {
+    font-size: 0.65rem;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    opacity: 0.5;
+  }
+  .ad-card {
+    display: block;
+    text-decoration: none;
+    border: 1px solid currentColor;
+    border-radius: 8px;
+    padding: 0.8rem 0.9rem;
+    margin-top: 0.5rem;
+  }
+  .ad-card strong {
+    display: block;
+  }
+  .ad-card em {
+    display: inline-block;
+    margin-top: 0.4rem;
+    font-style: normal;
+    font-size: 0.8rem;
   }
 </style>

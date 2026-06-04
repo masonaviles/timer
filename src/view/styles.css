@@ -786,6 +786,68 @@
   transform: translateX(-50%) translateY(0);
 }
 
+/* ============ AD SLOT ============ */
+.cs-ad {
+  display: block;
+  min-height: 90px; /* reserve space to avoid layout shift */
+  padding: 14px;
+}
+.cs-ad-tag {
+  font-family: var(--font-mono);
+  font-size: 8px;
+  letter-spacing: 0.2em;
+  color: var(--faint);
+  text-transform: uppercase;
+  margin-bottom: 8px;
+}
+.cs-ad-card {
+  display: block;
+  text-decoration: none;
+  background: var(--surface);
+  border: 0.5px solid var(--border2);
+  border-radius: 8px;
+  padding: 13px 14px;
+  margin-bottom: 8px;
+  transition: border-color 0.15s;
+}
+.cs-ad-card:hover {
+  border-color: var(--accent);
+}
+.cs-ad-card:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+.cs-ad-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text);
+  margin-bottom: 3px;
+}
+.cs-ad-blurb {
+  font-size: 11px;
+  color: var(--muted);
+  line-height: 1.4;
+}
+.cs-ad-cta {
+  display: inline-block;
+  margin-top: 8px;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  color: var(--accent);
+}
+.cs-ad-network {
+  background: var(--surface);
+  border: 0.5px dashed var(--border2);
+  border-radius: 8px;
+  padding: 24px 14px;
+  text-align: center;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  color: var(--dim);
+}
+
 /* responsive */
 @media (max-width: 720px) {
   .cs-main {

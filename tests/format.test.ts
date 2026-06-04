@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { fmt, fmtShort, pad } from '../src/engine/format.js';
+import { fmt, fmtShort, pad, parseDuration, toDurationInput } from '../src/engine/format.js';
 
 describe('pad', () => {
   it('zero-pads to two digits', () => {
@@ -37,5 +37,32 @@ describe('fmtShort', () => {
     expect(fmtShort(3600)).toBe('1h');
     expect(fmtShort(3660)).toBe('1h 1m');
     expect(fmtShort(5400)).toBe('1h 30m');
+  });
+});
+
+describe('toDurationInput', () => {
+  it('renders mm:ss, and h:mm:ss at an hour or more', () => {
+    expect(toDurationInput(90)).toBe('01:30');
+    expect(toDurationInput(0)).toBe('00:00');
+    expect(toDurationInput(600)).toBe('10:00');
+    expect(toDurationInput(3661)).toBe('1:01:01');
+  });
+});
+
+describe('parseDuration', () => {
+  it('parses ss, mm:ss, and h:mm:ss', () => {
+    expect(parseDuration('90')).toBe(90);
+    expect(parseDuration('1:30')).toBe(90);
+    expect(parseDuration('10:00')).toBe(600);
+    expect(parseDuration('1:00:00')).toBe(3600);
+    expect(parseDuration(' 1:30 ')).toBe(90);
+  });
+
+  it('returns 0 for a well-formed zero and null for malformed input', () => {
+    expect(parseDuration('00:00')).toBe(0);
+    expect(parseDuration('abc')).toBeNull();
+    expect(parseDuration('1:2:3:4')).toBeNull();
+    expect(parseDuration('1.5')).toBeNull();
+    expect(parseDuration('')).toBeNull();
   });
 });

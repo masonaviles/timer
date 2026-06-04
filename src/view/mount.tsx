@@ -4,6 +4,7 @@
 import { render } from 'preact';
 import type { TimerConfig } from '../data/schema.js';
 import { TimerEngine, type TimerEngineOptions } from '../engine/TimerEngine.js';
+import { Builder, type BuilderProps } from './Builder.js';
 import { Player } from './Player.js';
 
 export interface MountResult {
@@ -24,6 +25,16 @@ export function mountPlayer(
     unmount() {
       render(null, el);
       engine.dispose();
+    },
+  };
+}
+
+/** Render a Builder into `el`. */
+export function mountBuilder(el: HTMLElement, props: BuilderProps): { unmount(): void } {
+  render(<Builder {...props} />, el);
+  return {
+    unmount() {
+      render(null, el);
     },
   };
 }

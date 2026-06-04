@@ -7,6 +7,7 @@ export default defineConfig({
     globals: true,
     // jsdom for view/component tests; the engine/data tests are environment-agnostic.
     environment: 'jsdom',
+    setupFiles: ['tests/setup.ts'],
     include: ['tests/**/*.test.ts', 'tests/**/*.test.tsx', 'src/**/*.test.ts'],
     coverage: {
       provider: 'v8',

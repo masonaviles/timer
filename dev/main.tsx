@@ -1,59 +1,77 @@
-// Standalone dev app — boots the Player and provides a dev-only preset + accent switcher
-// to exercise the theming system. The real theme UI is the Phase 4 builder; this is throwaway.
-// (Share-link loading via ?t= arrives in Phase 4; Astro routes in Phase 5.)
+// Standalone dev app — demonstrates the full Phase 4 flow:
+//  - boot resolves config from ?t= / ?id= / draft / sample
+//  - Builder ⇄ Player navigation
+//  - share links, local saves, theming
+// (Astro routes replace this shell in Phase 5.)
 
 import { render } from 'preact';
-import { useMemo, useState } from 'preact/hooks';
-import { PRESET_LIST, clonePreset, createSampleTimer, withAccent } from '../src/data/presets.js';
+import { useEffect, useMemo, useState } from 'preact/hooks';
+import { createSampleTimer } from '../src/data/presets.js';
+import type { TimerConfig } from '../src/data/schema.js';
 import { TimerEngine } from '../src/engine/TimerEngine.js';
+import { LocalStorageRepository, resolvePlayerConfig } from '../src/persistence/index.js';
+import { Builder } from '../src/view/Builder.js';
 import { Player } from '../src/view/Player.js';
 
-function Dev() {
-  const [presetKey, setPresetKey] = useState('retreatAmber');
-  const [accent, setAccent] = useState<string | null>(null);
+const repository = new LocalStorageRepository();
 
-  const engine = useMemo(() => {
-    const cfg = createSampleTimer();
-    const base = clonePreset(presetKey);
-    cfg.theme = accent ? withAccent(base, accent) : base;
-    return new TimerEngine(cfg);
-  }, [presetKey, accent]);
+function App() {
+  const [mode, setMode] = useState<'loading' | 'builder' | 'player'>('loading');
+  const [config, setConfig] = useState<TimerConfig>(() => createSampleTimer());
+  const [notice, setNotice] = useState<string | null>(null);
 
-  const bar: string =
-    'position:fixed;z-index:10000;bottom:14px;left:50%;transform:translateX(-50%);' +
-    'display:flex;gap:6px;align-items:center;background:#000a;border:1px solid #333;' +
-    'padding:8px 10px;border-radius:10px;font:12px system-ui;backdrop-filter:blur(6px)';
+  useEffect(() => {
+    resolvePlayerConfig({ repository, fallback: createSampleTimer }).then((res) => {
+      setConfig(res.config);
+      setNotice(res.notice ?? null);
+      // start in the player when a link/id was opened, else the builder
+      setMode(res.source === 'link' || res.source === 'id' ? 'player' : 'builder');
+    });
+  }, []);
+
+  const engine = useMemo(() => new TimerEngine(structuredClone(config)), [config]);
+
+  if (mode === 'loading') return null;
+
+  const tab: string =
+    'position:fixed;top:14px;left:50%;transform:translateX(-50%);z-index:10002;display:flex;' +
+    'gap:6px;background:#000a;border:1px solid #333;padding:5px;border-radius:9px;backdrop-filter:blur(6px)';
+  const btn = (on: boolean) =>
+    `cursor:pointer;border-radius:6px;padding:5px 12px;border:1px solid ${on ? '#f5a623' : '#444'};` +
+    `background:${on ? '#f5a623' : '#1a1b20'};color:${on ? '#0d0e11' : '#ddd'};font:600 12px system-ui`;
 
   return (
     <>
-      <Player key={`${presetKey}:${accent}`} engine={engine} />
-      <div style={bar}>
-        {PRESET_LIST.map((p) => (
-          <button
-            key={p.key}
-            type="button"
-            onClick={() => {
-              setPresetKey(p.key);
-              setAccent(null);
-            }}
-            style={`cursor:pointer;border-radius:6px;padding:5px 9px;border:1px solid ${
-              presetKey === p.key && !accent ? '#f5a623' : '#444'
-            };background:#1a1b20;color:#ddd`}
-          >
-            {p.label}
-          </button>
-        ))}
-        <input
-          type="color"
-          title="Custom accent"
-          value={accent ?? '#f5a623'}
-          onInput={(e) => setAccent((e.target as HTMLInputElement).value)}
-          style="width:30px;height:26px;border:1px solid #444;border-radius:6px;background:#1a1b20;cursor:pointer"
+      {mode === 'builder' ? (
+        <Builder
+          initialConfig={config}
+          repository={repository}
+          onOpenInPlayer={(c) => {
+            setConfig(c);
+            setMode('player');
+          }}
         />
+      ) : (
+        <Player engine={engine} />
+      )}
+
+      <div style={tab}>
+        <button type="button" style={btn(mode === 'builder')} onClick={() => setMode('builder')}>
+          Builder
+        </button>
+        <button type="button" style={btn(mode === 'player')} onClick={() => setMode('player')}>
+          Player
+        </button>
       </div>
+
+      {notice && (
+        <div style="position:fixed;bottom:26px;left:50%;transform:translateX(-50%);z-index:10002;background:#1a1b20;border:1px solid #e05c5c;color:#e8e6df;padding:10px 18px;border-radius:8px;font:12px system-ui">
+          {notice}
+        </div>
+      )}
     </>
   );
 }
 
 const el = document.getElementById('app');
-if (el) render(<Dev />, el);
+if (el) render(<App />, el);

@@ -1,0 +1,32 @@
+---
+// Builder route: /utilities/timer/builder
+// Editor-only, so client:only="preact" (no SSR of the form is needed).
+import BuilderIsland from '../../../components/BuilderIsland.tsx';
+---
+
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Build a Timer</title>
+    <link
+      href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Mono:wght@400;500&family=DM+Sans:wght@400;500;600&family=Inter:wght@400;500;600;700&family=Space+Grotesk:wght@400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      html,
+      body {
+        height: 100%;
+        margin: 0;
+      }
+      .builder-frame {
+        height: 100vh;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="builder-frame">
+      <BuilderIsland client:only="preact" />
+    </div>
+  </body>
+</html>

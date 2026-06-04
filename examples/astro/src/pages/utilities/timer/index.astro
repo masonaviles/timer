@@ -1,0 +1,36 @@
+---
+// Player route: /utilities/timer  (and /utilities/timer?t=... share links)
+// The interactive part is a hydrated Preact island; everything around it (nav, ad slots)
+// is server-rendered page shell, so ads don't couple to the timer (ADR-002/003).
+import TimerIsland from '../../../components/TimerIsland.tsx';
+const search = Astro.url.search;
+---
+
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Step Timer</title>
+    <meta name="description" content="A themeable, shareable step-by-step cue timer." />
+    <!-- Preset fonts. Prefer self-hosting via @fontsource in production. -->
+    <link
+      href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Mono:wght@400;500&family=DM+Sans:wght@400;500;600&family=Inter:wght@400;500;600;700&family=Space+Grotesk:wght@400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      html,
+      body {
+        height: 100%;
+        margin: 0;
+      }
+      .timer-frame {
+        height: 100vh;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="timer-frame">
+      <TimerIsland client:load search={search} />
+    </div>
+  </body>
+</html>

@@ -1,7 +1,7 @@
 {
   "name": "@masonaviles/cuestack",
-  "version": "0.0.0",
-  "description": "White-label, themeable, step-by-step cue timer. Framework-free core + view layer, shippable as a package.",
+  "version": "0.1.0",
+  "description": "White-label, themeable, step-by-step cue timer. Framework-free core + Preact view layer, shippable as a package.",
   "type": "module",
   "license": "UNLICENSED",
   "author": "Mason Aviles",
@@ -22,13 +22,24 @@
     "./persistence": {
       "types": "./dist/persistence/index.d.ts",
       "import": "./dist/persistence/index.js"
-    }
+    },
+    "./player": {
+      "types": "./dist/player.d.ts",
+      "import": "./dist/player.js"
+    },
+    "./builder": {
+      "types": "./dist/builder.d.ts",
+      "import": "./dist/builder.js"
+    },
+    "./styles.css": "./dist/view/styles.css"
   },
   "files": ["dist"],
   "scripts": {
     "dev": "vite",
     "preview": "vite preview",
-    "build": "tsc -p tsconfig.build.json",
+    "clean": "rm -rf dist",
+    "build": "npm run clean && tsc -p tsconfig.build.json && node scripts/copy-assets.mjs",
+    "prepublishOnly": "npm run check && npm run build",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "test:watch": "vitest",
@@ -40,8 +51,10 @@
   },
   "dependencies": {
     "lz-string": "^1.5.0",
-    "nanoid": "^5.0.0",
-    "preact": "^10.24.0"
+    "nanoid": "^5.0.0"
+  },
+  "peerDependencies": {
+    "preact": ">=10"
   },
   "devDependencies": {
     "@biomejs/biome": "^1.9.0",
@@ -49,6 +62,7 @@
     "@testing-library/preact": "^3.2.4",
     "@vitest/coverage-v8": "^2.1.0",
     "jsdom": "^25.0.0",
+    "preact": "^10.24.0",
     "typescript": "^5.6.0",
     "vite": "^5.4.0",
     "vitest": "^2.1.0"

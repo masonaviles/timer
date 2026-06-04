@@ -6,11 +6,35 @@ package and embeds into an Astro site. (Working codename; see
 
 ## Status
 
-**Phase 0 — Foundation.** Tooling + skeleton in place; feature work begins in Phase 1.
+**Phase 5 — Astro integration.** Player, builder, theming, persistence/sharing are built and
+tested; the package is publishable (`./player`, `./builder`, `./engine`, `./data`,
+`./persistence` entry points + bundled CSS). Astro route/island templates live in
+[examples/astro/](examples/astro/README.md). Next: Phase 6 (ad slots).
 Full plan: [docs/](docs/README.md) · per-phase docs: [docs/phases/](docs/phases/README.md).
 
 - `prototype.html` — a single-file working prototype (proof of the vision; not the package).
 - `BTMB_Retreat_Timer.html` — the original reference; the behavioural baseline for parity.
+
+## Use it (as a package)
+
+```bash
+npm i github:masonaviles/timer#v0.1.0   # or @masonaviles/cuestack once published
+npx astro add preact                     # the view layer needs Preact (a peer dependency)
+```
+
+```tsx
+// Player — resolves ?t= / ?id= / draft / sample, then renders
+import { TimerEngine } from '@masonaviles/cuestack/engine';
+import { createSampleTimer } from '@masonaviles/cuestack/data';
+import { resolvePlayerConfig, LocalStorageRepository } from '@masonaviles/cuestack/persistence';
+import { Player } from '@masonaviles/cuestack/player';          // pulls in CSS automatically
+
+// Builder
+import { Builder } from '@masonaviles/cuestack/builder';
+```
+
+Engine/data/persistence are framework-free; only `./player` and `./builder` need Preact.
+Full Astro wiring: [examples/astro/](examples/astro/README.md).
 
 ## Develop
 

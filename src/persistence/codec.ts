@@ -2,7 +2,9 @@
 // A TimerConfig is validated, JSON-encoded, LZ-compressed, and URL-safe base64'd into `?t=`.
 // Decoding reverses that, then runs migrate -> validate (the type boundary). See ADR-001.
 
-import * as LZString from 'lz-string';
+// Default import (not namespace) — lz-string is CommonJS; its functions live on the default
+// export under Node ESM interop. esModuleInterop makes this work in both Node and bundlers.
+import LZString from 'lz-string';
 import { migrate } from '../data/migrate.js';
 import type { TimerConfig } from '../data/schema.js';
 import { validateConfig } from '../data/validate.js';

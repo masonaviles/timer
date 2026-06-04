@@ -1,0 +1,689 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>BTMB · Retreat Cue Timer</title>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Mono:wght@400;500&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet" />
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --amber: #f5a623;
+    --red: #e05c5c;
+    --green: #4caf7d;
+    --bg: #0d0e11;
+    --bg2: #111216;
+    --bg3: #1a1b20;
+    --border: #1e1f24;
+    --border2: #2a2b30;
+    --text: #e8e6df;
+    --muted: #888;
+    --dim: #555;
+    --faint: #333;
+  }
+
+  html, body {
+    height: 100%;
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'DM Sans', sans-serif;
+    overflow: hidden;
+  }
+
+  .app {
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+  }
+
+  /* HEADER */
+  .header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 13px 28px;
+    background: var(--bg2);
+    border-bottom: 0.5px solid var(--border);
+    flex-shrink: 0;
+  }
+
+  .brand {
+    font-family: 'DM Mono', monospace;
+    font-size: 12px;
+    letter-spacing: 0.18em;
+    color: var(--dim);
+    text-transform: uppercase;
+  }
+  .brand span { color: var(--amber); }
+
+  .header-right {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+  }
+
+  .status {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 0.12em;
+    color: var(--dim);
+  }
+
+  .dot {
+    width: 7px; height: 7px;
+    border-radius: 50%;
+    background: #2a2b30;
+    transition: background 0.3s, box-shadow 0.3s;
+  }
+  .dot.running { background: var(--green); box-shadow: 0 0 8px #4caf7d66; }
+  .dot.warn    { background: var(--amber); box-shadow: 0 0 8px #f5a62366; }
+  .dot.danger  { background: var(--red);   box-shadow: 0 0 8px #e05c5c66; }
+
+  /* MAIN LAYOUT */
+  .main {
+    display: grid;
+    grid-template-columns: 1fr 340px;
+    flex: 1;
+    min-height: 0;
+  }
+
+  /* CLOCK PANEL */
+  .clock-panel {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 40px;
+    position: relative;
+    border-right: 0.5px solid var(--border);
+  }
+
+  .cue-label {
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 0.22em;
+    text-transform: uppercase;
+    color: var(--dim);
+    margin-bottom: 14px;
+    text-align: center;
+    max-width: 480px;
+    transition: color 0.3s;
+  }
+  .cue-label.active { color: var(--amber); }
+
+  .cue-number {
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 0.1em;
+    color: var(--faint);
+    margin-bottom: 4px;
+  }
+
+  .clock {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: clamp(100px, 18vw, 180px);
+    line-height: 0.9;
+    letter-spacing: 0.02em;
+    color: #f0ede6;
+    transition: color 0.4s;
+    text-align: center;
+  }
+  .clock.warn   { color: var(--amber); }
+  .clock.danger { color: var(--red); }
+
+  .progress-wrap {
+    width: 100%;
+    max-width: 500px;
+    height: 3px;
+    background: var(--border);
+    border-radius: 2px;
+    margin-top: 28px;
+    overflow: hidden;
+  }
+
+  .progress {
+    height: 100%;
+    background: var(--green);
+    border-radius: 2px;
+    transition: width 1s linear, background 0.4s;
+    width: 100%;
+  }
+  .progress.warn   { background: var(--amber); }
+  .progress.danger { background: var(--red); }
+
+  .controls {
+    display: flex;
+    gap: 12px;
+    margin-top: 32px;
+  }
+
+  .btn {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    padding: 11px 24px;
+    border-radius: 7px;
+    border: none;
+    cursor: pointer;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 14px;
+    font-weight: 500;
+    transition: all 0.15s;
+  }
+  .btn:active { transform: scale(0.97); }
+
+  .btn-start {
+    background: #f0ede6;
+    color: #0d0e11;
+    min-width: 110px;
+    justify-content: center;
+  }
+  .btn-start:hover { background: #fff; }
+  .btn-start.running { background: var(--amber); color: #0d0e11; }
+
+  .btn-ghost {
+    background: transparent;
+    color: var(--muted);
+    border: 0.5px solid var(--border2);
+  }
+  .btn-ghost:hover { background: var(--bg3); color: #ccc; }
+
+  .btn-fs {
+    position: absolute;
+    top: 20px; right: 20px;
+    background: transparent;
+    border: 0.5px solid #1e1f24;
+    color: var(--faint);
+    padding: 8px 14px;
+    border-radius: 5px;
+    cursor: pointer;
+    font-size: 12px;
+    font-family: 'DM Mono', monospace;
+    letter-spacing: 0.1em;
+    transition: all 0.15s;
+  }
+  .btn-fs:hover { border-color: #444; color: var(--muted); }
+
+  /* next cue hint */
+  .next-hint {
+    margin-top: 20px;
+    font-size: 12px;
+    font-family: 'DM Mono', monospace;
+    color: var(--faint);
+    letter-spacing: 0.1em;
+    text-align: center;
+    height: 18px;
+    transition: color 0.3s;
+  }
+
+  /* CUE PANEL */
+  .cue-panel {
+    display: flex;
+    flex-direction: column;
+    background: var(--bg2);
+    overflow: hidden;
+  }
+
+  .cue-header {
+    padding: 16px 20px 14px;
+    border-bottom: 0.5px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-shrink: 0;
+  }
+
+  .cue-title {
+    font-family: 'DM Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 0.22em;
+    text-transform: uppercase;
+    color: #3a3b40;
+  }
+
+  .total-time {
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    color: var(--faint);
+    letter-spacing: 0.08em;
+  }
+
+  .cue-list {
+    flex: 1;
+    overflow-y: auto;
+    padding: 6px 8px;
+  }
+
+  .cue-list::-webkit-scrollbar { width: 3px; }
+  .cue-list::-webkit-scrollbar-track { background: transparent; }
+  .cue-list::-webkit-scrollbar-thumb { background: #222; border-radius: 2px; }
+
+  .cue-item {
+    display: grid;
+    grid-template-columns: 22px 1fr auto;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 12px;
+    border-radius: 6px;
+    margin-bottom: 2px;
+    border: 0.5px solid transparent;
+    cursor: pointer;
+    transition: all 0.12s;
+  }
+
+  .cue-item:hover { background: #16171c; border-color: #222; }
+
+  .cue-item.active {
+    background: #1a1b20;
+    border-color: var(--amber);
+  }
+
+  .cue-num {
+    font-family: 'DM Mono', monospace;
+    font-size: 10px;
+    color: var(--faint);
+    text-align: right;
+  }
+  .cue-item.active .cue-num { color: var(--amber); }
+
+  .cue-name {
+    font-size: 13px;
+    font-weight: 500;
+    color: #ccc;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .cue-item.active .cue-name { color: var(--amber); }
+
+  .cue-dur {
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    color: var(--dim);
+    white-space: nowrap;
+  }
+  .cue-item.active .cue-dur { color: var(--amber); opacity: 0.7; }
+
+  /* FULLSCREEN */
+  .fs {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: #060708;
+    z-index: 9999;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+  }
+  .fs.show { display: flex; }
+
+  .fs-num {
+    font-family: 'DM Mono', monospace;
+    font-size: 13px;
+    letter-spacing: 0.2em;
+    color: #333;
+    margin-bottom: 8px;
+  }
+
+  .fs-label {
+    font-family: 'DM Mono', monospace;
+    font-size: 16px;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: #444;
+    margin-bottom: 20px;
+    text-align: center;
+    max-width: 80vw;
+  }
+
+  .fs-clock {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: clamp(120px, 28vw, 280px);
+    line-height: 0.85;
+    color: #f0ede6;
+    transition: color 0.4s;
+    letter-spacing: 0.02em;
+  }
+  .fs-clock.warn   { color: var(--amber); }
+  .fs-clock.danger { color: var(--red); }
+
+  .fs-bar-wrap {
+    width: 55vw;
+    height: 4px;
+    background: #1a1b20;
+    border-radius: 2px;
+    margin-top: 44px;
+    overflow: hidden;
+  }
+
+  .fs-bar {
+    height: 100%;
+    background: var(--green);
+    border-radius: 2px;
+    transition: width 1s linear, background 0.4s;
+  }
+
+  .fs-next {
+    position: absolute;
+    bottom: 40px;
+    font-family: 'DM Mono', monospace;
+    font-size: 12px;
+    letter-spacing: 0.14em;
+    color: #2a2b30;
+  }
+
+  .fs-exit {
+    position: absolute;
+    top: 24px; right: 24px;
+    background: transparent;
+    border: 0.5px solid #1e1f24;
+    color: #2a2b30;
+    padding: 8px 16px;
+    border-radius: 5px;
+    cursor: pointer;
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 0.12em;
+    transition: all 0.2s;
+  }
+  .fs-exit:hover { border-color: #444; color: #888; }
+
+  /* DONE banner */
+  .done-banner {
+    display: none;
+    position: absolute;
+    bottom: 80px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: var(--green);
+    color: #0d0e11;
+    font-family: 'DM Mono', monospace;
+    font-size: 13px;
+    letter-spacing: 0.18em;
+    padding: 10px 28px;
+    border-radius: 6px;
+    text-transform: uppercase;
+    font-weight: 500;
+  }
+
+  @keyframes flash {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.1; }
+  }
+  .flashing { animation: flash 0.35s ease-in-out 8; }
+</style>
+</head>
+<body>
+
+<div class="app">
+  <div class="header">
+    <div class="brand"><span>BTMB</span> · Retreat Cue Timer</div>
+    <div class="header-right">
+      <div class="status">
+        <div class="dot" id="dot"></div>
+        <span id="status-txt">STANDBY</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="main">
+
+    <!-- CLOCK -->
+    <div class="clock-panel">
+      <button class="btn-fs" onclick="openFS()">⤢ FULLSCREEN</button>
+      <div class="cue-number" id="cue-number"></div>
+      <div class="cue-label" id="cue-label">— select a cue to begin —</div>
+      <div class="clock" id="clock">00:00</div>
+      <div class="progress-wrap">
+        <div class="progress" id="progress" style="width:100%"></div>
+      </div>
+      <div class="controls">
+        <button class="btn btn-start" id="start-btn" onclick="toggleTimer()">▶ Start</button>
+        <button class="btn btn-ghost" onclick="resetTimer()">↺ Reset</button>
+      </div>
+      <div class="next-hint" id="next-hint"></div>
+      <div class="done-banner" id="done-banner">✓ Time's Up</div>
+    </div>
+
+    <!-- CUE LIST -->
+    <div class="cue-panel">
+      <div class="cue-header">
+        <div class="cue-title">Cue List · 19 segments</div>
+        <div class="total-time">6h 13m total</div>
+      </div>
+      <div class="cue-list" id="cue-list"></div>
+    </div>
+  </div>
+</div>
+
+<!-- FULLSCREEN -->
+<div class="fs" id="fs">
+  <button class="fs-exit" onclick="closeFS()">ESC · EXIT</button>
+  <div class="fs-num" id="fs-num"></div>
+  <div class="fs-label" id="fs-label">—</div>
+  <div class="fs-clock" id="fs-clock">00:00</div>
+  <div class="fs-bar-wrap">
+    <div class="fs-bar" id="fs-bar" style="width:100%"></div>
+  </div>
+  <div class="fs-next" id="fs-next"></div>
+</div>
+
+<script>
+const CUES = [
+  { name: 'Welcome Prompt & Recap',    mins: 20 },
+  { name: 'Family Journal Time',        mins: 7  },
+  { name: 'Friendship Journal Time',    mins: 6  },
+  { name: '10 Min Break',              mins: 10 },
+  { name: 'Nervous System Exercise',   mins: 20 },
+  { name: '20 Min Break',              mins: 20 },
+  { name: 'Bad Reactions Journal',     mins: 10 },
+  { name: 'Bad Reactions Roleplay #1', mins: 10 },
+  { name: 'Bad Reactions Roleplay #2', mins: 10 },
+  { name: 'Bad Reactions Roleplay #3', mins: 10 },
+  { name: 'Lunch',                     mins: 60 },
+  { name: 'Friendship Journal',        mins: 10 },
+  { name: 'Friendship Roleplay #1',    mins: 12 },
+  { name: 'Friendship Roleplay #2',    mins: 12 },
+  { name: '10 Min Break',              mins: 10 },
+  { name: 'Family Journal',            mins: 12 },
+  { name: 'Family Roleplay #1',        mins: 12 },
+  { name: 'Family Roleplay #2',        mins: 12 },
+  { name: '20 Min Break',              mins: 20 },
+].map((c, i) => ({ ...c, id: i, totalSecs: c.mins * 60 }));
+
+let activeId   = null;
+let remaining  = 0;
+let total      = 0;
+let running    = false;
+let ticker     = null;
+let audioCtx   = null;
+
+function fmt(s) {
+  const h = Math.floor(s / 3600);
+  const m = Math.floor((s % 3600) / 60);
+  const sec = s % 60;
+  if (h > 0) return `${h}:${pad(m)}:${pad(sec)}`;
+  return `${pad(m)}:${pad(sec)}`;
+}
+function pad(n) { return String(n).padStart(2, '0'); }
+function fmtShort(s) {
+  const h = Math.floor(s / 3600);
+  const m = Math.floor((s % 3600) / 60);
+  if (h > 0 && m > 0) return `${h}h ${m}m`;
+  if (h > 0) return `${h}h`;
+  return `${m}m`;
+}
+
+function colorClass(rem, tot) {
+  if (tot === 0) return '';
+  const p = rem / tot;
+  if (p <= 0.1) return 'danger';
+  if (p <= 0.25) return 'warn';
+  return '';
+}
+
+function updateDisplay() {
+  const txt = fmt(remaining);
+  const cls = colorClass(remaining, total);
+  const pct = total > 0 ? (remaining / total * 100) : 100;
+
+  document.getElementById('clock').textContent    = txt;
+  document.getElementById('fs-clock').textContent = txt;
+
+  document.getElementById('clock').className    = 'clock ' + cls;
+  document.getElementById('fs-clock').className = 'fs-clock ' + cls;
+
+  const pb  = document.getElementById('progress');
+  const fpb = document.getElementById('fs-bar');
+  pb.style.width  = pct + '%';
+  fpb.style.width = pct + '%';
+  pb.className  = 'progress ' + cls;
+  fpb.style.background = cls === 'danger' ? 'var(--red)' : cls === 'warn' ? 'var(--amber)' : 'var(--green)';
+
+  const dot  = document.getElementById('dot');
+  const stxt = document.getElementById('status-txt');
+  if (running) {
+    dot.className = 'dot ' + (cls || 'running');
+    stxt.textContent = cls === 'danger' ? 'URGENT' : cls === 'warn' ? 'WARNING' : 'RUNNING';
+  } else {
+    dot.className = 'dot';
+    stxt.textContent = 'STANDBY';
+  }
+}
+
+function selectCue(id) {
+  stopTimer();
+  activeId  = id;
+  remaining = CUES[id].totalSecs;
+  total     = CUES[id].totalSecs;
+
+  document.getElementById('cue-label').textContent  = CUES[id].name;
+  document.getElementById('cue-label').className    = 'cue-label active';
+  document.getElementById('cue-number').textContent = `CUE ${id + 1} OF ${CUES.length}`;
+  document.getElementById('fs-label').textContent   = CUES[id].name;
+  document.getElementById('fs-num').textContent     = `${id + 1} / ${CUES.length}`;
+  document.getElementById('done-banner').style.display = 'none';
+
+  const next = CUES[id + 1];
+  const hint = next ? `next: ${next.name} · ${fmtShort(next.totalSecs)}` : 'last segment';
+  document.getElementById('next-hint').textContent  = hint;
+  document.getElementById('fs-next').textContent    = next ? `up next · ${next.name}` : '';
+
+  renderList();
+  updateDisplay();
+}
+
+function toggleTimer() {
+  if (activeId === null) return;
+  if (running) { stopTimer(); }
+  else { startTimer(); }
+}
+
+function startTimer() {
+  if (remaining <= 0) return;
+  running = true;
+  document.getElementById('start-btn').textContent = '⏸ Pause';
+  document.getElementById('start-btn').classList.add('running');
+  ticker = setInterval(() => {
+    remaining--;
+    updateDisplay();
+    if (remaining <= 0) {
+      stopTimer();
+      triggerAlert();
+      document.getElementById('done-banner').style.display = 'block';
+    }
+  }, 1000);
+  updateDisplay();
+}
+
+function stopTimer() {
+  clearInterval(ticker);
+  running = false;
+  document.getElementById('start-btn').textContent = '▶ Start';
+  document.getElementById('start-btn').classList.remove('running');
+  updateDisplay();
+}
+
+function resetTimer() {
+  stopTimer();
+  if (activeId !== null) {
+    remaining = CUES[activeId].totalSecs;
+    total     = CUES[activeId].totalSecs;
+  }
+  document.getElementById('done-banner').style.display = 'none';
+  updateDisplay();
+}
+
+function openFS() {
+  document.getElementById('fs').classList.add('show');
+  const el = document.getElementById('fs');
+  if (el.requestFullscreen) el.requestFullscreen().catch(() => {});
+}
+
+function closeFS() {
+  document.getElementById('fs').classList.remove('show');
+  if (document.fullscreenElement) document.exitFullscreen().catch(() => {});
+}
+
+function triggerAlert() {
+  ['clock','fs-clock'].forEach(id => {
+    const el = document.getElementById(id);
+    el.classList.add('flashing');
+    setTimeout(() => el.classList.remove('flashing'), 3200);
+  });
+
+  try {
+    if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    [0, 350, 700, 1100].forEach(delay => {
+      setTimeout(() => {
+        const osc  = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+        osc.type = 'square';
+        osc.frequency.setValueAtTime(960, audioCtx.currentTime);
+        osc.frequency.setValueAtTime(720, audioCtx.currentTime + 0.1);
+        gain.gain.setValueAtTime(0.3, audioCtx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.4);
+        osc.start(audioCtx.currentTime);
+        osc.stop(audioCtx.currentTime + 0.4);
+      }, delay);
+    });
+  } catch(e) {}
+}
+
+function renderList() {
+  const list = document.getElementById('cue-list');
+  list.innerHTML = '';
+  CUES.forEach((cue, i) => {
+    const el = document.createElement('div');
+    el.className = 'cue-item' + (i === activeId ? ' active' : '');
+    el.innerHTML = `
+      <div class="cue-num">${i + 1}</div>
+      <div class="cue-name">${cue.name}</div>
+      <div class="cue-dur">${fmtShort(cue.totalSecs)}</div>
+    `;
+    el.addEventListener('click', () => selectCue(i));
+    list.appendChild(el);
+  });
+  if (activeId !== null) {
+    list.children[activeId]?.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+  }
+}
+
+document.addEventListener('keydown', e => {
+  if (e.code === 'Escape') closeFS();
+  if (e.code === 'Space' && activeId !== null) { e.preventDefault(); toggleTimer(); }
+  if (e.code === 'KeyF') openFS();
+});
+
+// init
+renderList();
+updateDisplay();
+</script>
+</body>
+</html>

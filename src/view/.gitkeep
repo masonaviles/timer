@@ -1,0 +1,3 @@
+# View layer (player / builder / theme-provider / ad-slot) lands in Phase 2+.
+# Framework (A1) is decided at that point; the engine/data/persistence layers below
+# stay framework-free regardless.

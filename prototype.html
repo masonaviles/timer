@@ -1,0 +1,810 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>CueStack · Step Timer (Prototype)</title>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Mono:wght@400;500&family=DM+Sans:wght@400;500;600&family=Inter:wght@400;500;600;700&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet" />
+<style>
+  /* ============================================================
+     CueStack prototype — single-file proof of the build docs.
+     Demonstrates: white-label config · themeable design tokens ·
+     builder · wall-clock engine · URL share · pluggable ad slot.
+     All themeable values are CSS custom properties on .cuestack
+     so restyling is "swap a token object" (see docs/02-ARCHITECTURE).
+     ============================================================ */
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  /* token defaults — ThemeProvider overwrites these at runtime */
+  .cuestack {
+    --bg: #0d0e11;
+    --bg2: #111216;
+    --surface: #1a1b20;
+    --border: #1e1f24;
+    --border2: #2a2b30;
+    --text: #e8e6df;
+    --muted: #888;
+    --dim: #555;
+    --faint: #333;
+    --accent: #f5a623;
+    --warn: #f5a623;
+    --danger: #e05c5c;
+    --ok: #4caf7d;
+    --font-display: 'Bebas Neue', sans-serif;
+    --font-body: 'DM Sans', sans-serif;
+    --font-mono: 'DM Mono', monospace;
+  }
+
+  html, body { height: 100%; }
+  body {
+    background: var(--bg, #0d0e11);
+    color: var(--text, #e8e6df);
+    font-family: var(--font-body), sans-serif;
+    overflow: hidden;
+  }
+
+  .cuestack {
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+    background: var(--bg);
+    color: var(--text);
+  }
+
+  /* HEADER */
+  .header {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 13px 24px;
+    background: var(--bg2);
+    border-bottom: 0.5px solid var(--border);
+    flex-shrink: 0;
+    gap: 16px;
+  }
+  .brand {
+    font-family: var(--font-mono);
+    font-size: 12px; letter-spacing: 0.18em;
+    color: var(--dim); text-transform: uppercase;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  .brand b { color: var(--accent); font-weight: 500; }
+
+  .header-right { display: flex; align-items: center; gap: 10px; }
+  .status {
+    display: flex; align-items: center; gap: 8px;
+    font-family: var(--font-mono); font-size: 11px;
+    letter-spacing: 0.12em; color: var(--dim); margin-right: 4px;
+  }
+  .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--border2); transition: .3s; }
+  .dot.running { background: var(--ok); box-shadow: 0 0 8px color-mix(in srgb, var(--ok) 50%, transparent); }
+  .dot.warn    { background: var(--warn); box-shadow: 0 0 8px color-mix(in srgb, var(--warn) 50%, transparent); }
+  .dot.danger  { background: var(--danger); box-shadow: 0 0 8px color-mix(in srgb, var(--danger) 50%, transparent); }
+
+  .hbtn {
+    background: transparent; border: 0.5px solid var(--border2);
+    color: var(--muted); padding: 8px 13px; border-radius: 6px;
+    cursor: pointer; font-family: var(--font-mono); font-size: 11px;
+    letter-spacing: 0.08em; transition: .15s; white-space: nowrap;
+  }
+  .hbtn:hover { border-color: var(--accent); color: var(--text); }
+  .hbtn.primary { background: var(--accent); border-color: var(--accent); color: #0d0e11; font-weight: 600; }
+  .hbtn.primary:hover { filter: brightness(1.08); }
+
+  /* MAIN */
+  .main { display: grid; grid-template-columns: 1fr 320px; flex: 1; min-height: 0; }
+
+  .clock-panel {
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    padding: 32px; position: relative; border-right: 0.5px solid var(--border); min-width: 0;
+  }
+  .cue-number {
+    font-family: var(--font-mono); font-size: 11px; letter-spacing: 0.1em;
+    color: var(--faint); margin-bottom: 4px;
+  }
+  .cue-label {
+    font-family: var(--font-mono); font-size: 12px; letter-spacing: 0.22em;
+    text-transform: uppercase; color: var(--dim); margin-bottom: 14px;
+    text-align: center; max-width: 540px; transition: color .3s;
+  }
+  .cue-label.active { color: var(--accent); }
+  .clock {
+    font-family: var(--font-display);
+    font-size: clamp(90px, 16vw, 168px); line-height: 0.9; letter-spacing: 0.02em;
+    color: var(--text); transition: color .4s; text-align: center;
+  }
+  .clock.warn { color: var(--warn); } .clock.danger { color: var(--danger); }
+  .progress-wrap { width: 100%; max-width: 500px; height: 3px; background: var(--border); border-radius: 2px; margin-top: 26px; overflow: hidden; }
+  .progress { height: 100%; background: var(--ok); border-radius: 2px; transition: width 1s linear, background .4s; width: 100%; }
+  .progress.warn { background: var(--warn); } .progress.danger { background: var(--danger); }
+
+  .controls { display: flex; gap: 12px; margin-top: 30px; }
+  .btn {
+    display: flex; align-items: center; gap: 7px; padding: 11px 24px; border-radius: 7px;
+    border: none; cursor: pointer; font-family: var(--font-body); font-size: 14px; font-weight: 500; transition: .15s;
+  }
+  .btn:active { transform: scale(.97); }
+  .btn-start { background: var(--text); color: var(--bg); min-width: 110px; justify-content: center; }
+  .btn-start.running { background: var(--accent); color: #0d0e11; }
+  .btn-ghost { background: transparent; color: var(--muted); border: 0.5px solid var(--border2); }
+  .btn-ghost:hover { background: var(--surface); color: var(--text); }
+
+  .next-hint { margin-top: 18px; font-size: 12px; font-family: var(--font-mono); color: var(--faint); letter-spacing: 0.1em; text-align: center; height: 16px; }
+  .done-banner {
+    display: none; position: absolute; bottom: 70px; left: 50%; transform: translateX(-50%);
+    background: var(--ok); color: #0d0e11; font-family: var(--font-mono); font-size: 13px;
+    letter-spacing: 0.18em; padding: 10px 28px; border-radius: 6px; text-transform: uppercase; font-weight: 500;
+  }
+  .empty-state { color: var(--dim); font-family: var(--font-mono); font-size: 13px; letter-spacing: .1em; text-align:center; }
+
+  /* SIDE PANEL (cue list + ad slot) */
+  .side { display: flex; flex-direction: column; background: var(--bg2); overflow: hidden; }
+  .cue-head { padding: 15px 18px 13px; border-bottom: 0.5px solid var(--border); display: flex; justify-content: space-between; align-items: center; flex-shrink: 0; }
+  .cue-head-title { font-family: var(--font-mono); font-size: 10px; letter-spacing: 0.2em; text-transform: uppercase; color: var(--dim); }
+  .cue-total { font-family: var(--font-mono); font-size: 11px; color: var(--faint); }
+  .cue-list { flex: 1; overflow-y: auto; padding: 6px 8px; }
+  .cue-list::-webkit-scrollbar { width: 3px; } .cue-list::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 2px; }
+  .cue-item {
+    display: grid; grid-template-columns: 22px 1fr auto; align-items: center; gap: 10px;
+    padding: 10px 12px; border-radius: 6px; margin-bottom: 2px; border: 0.5px solid transparent;
+    cursor: pointer; transition: .12s;
+  }
+  .cue-item:hover { background: var(--surface); border-color: var(--border2); }
+  .cue-item.active { background: var(--surface); border-color: var(--accent); }
+  .cue-n { font-family: var(--font-mono); font-size: 10px; color: var(--faint); text-align: right; }
+  .cue-item.active .cue-n { color: var(--accent); }
+  .cue-nm { font-size: 13px; font-weight: 500; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .cue-item.active .cue-nm { color: var(--accent); }
+  .cue-d { font-family: var(--font-mono); font-size: 11px; color: var(--dim); white-space: nowrap; }
+
+  /* AD SLOT (self-promo strategy) */
+  .ad-slot { flex-shrink: 0; border-top: 0.5px solid var(--border); padding: 14px; }
+  .ad-tag { font-family: var(--font-mono); font-size: 8px; letter-spacing: 0.2em; color: var(--faint); text-transform: uppercase; margin-bottom: 8px; }
+  .ad-card {
+    display: block; text-decoration: none; background: var(--surface);
+    border: 0.5px solid var(--border2); border-radius: 8px; padding: 13px 14px; transition: .15s;
+  }
+  .ad-card:hover { border-color: var(--accent); }
+  .ad-title { font-size: 13px; font-weight: 600; color: var(--text); margin-bottom: 3px; }
+  .ad-blurb { font-size: 11px; color: var(--muted); line-height: 1.4; }
+  .ad-cta { display: inline-block; margin-top: 8px; font-family: var(--font-mono); font-size: 10px; letter-spacing: .08em; color: var(--accent); }
+
+  /* FULLSCREEN */
+  .fs { display: none; position: fixed; inset: 0; background: var(--bg); z-index: 9999; flex-direction: column; align-items: center; justify-content: center; }
+  .fs.show { display: flex; }
+  .fs-num { font-family: var(--font-mono); font-size: 13px; letter-spacing: 0.2em; color: var(--faint); margin-bottom: 8px; }
+  .fs-label { font-family: var(--font-mono); font-size: 16px; letter-spacing: 0.2em; text-transform: uppercase; color: var(--muted); margin-bottom: 20px; text-align: center; max-width: 80vw; }
+  .fs-clock { font-family: var(--font-display); font-size: clamp(120px, 28vw, 280px); line-height: 0.85; color: var(--text); transition: color .4s; letter-spacing: 0.02em; }
+  .fs-clock.warn { color: var(--warn); } .fs-clock.danger { color: var(--danger); }
+  .fs-bar-wrap { width: 55vw; height: 4px; background: var(--surface); border-radius: 2px; margin-top: 44px; overflow: hidden; }
+  .fs-bar { height: 100%; background: var(--ok); border-radius: 2px; transition: width 1s linear, background .4s; }
+  .fs-next { position: absolute; bottom: 40px; font-family: var(--font-mono); font-size: 12px; letter-spacing: 0.14em; color: var(--border2); }
+  .fs-exit { position: absolute; top: 24px; right: 24px; background: transparent; border: 0.5px solid var(--border); color: var(--dim); padding: 8px 16px; border-radius: 5px; cursor: pointer; font-family: var(--font-mono); font-size: 11px; letter-spacing: 0.12em; }
+  .fs-exit:hover { border-color: var(--accent); color: var(--text); }
+
+  /* DRAWER (builder) */
+  .scrim { display: none; position: fixed; inset: 0; background: rgba(0,0,0,.55); z-index: 100; }
+  .scrim.show { display: block; }
+  .drawer {
+    position: fixed; top: 0; right: -460px; width: 440px; max-width: 92vw; height: 100vh;
+    background: var(--bg2); border-left: 0.5px solid var(--border2); z-index: 101;
+    transition: right .25s ease; display: flex; flex-direction: column;
+  }
+  .drawer.show { right: 0; }
+  .drawer-head { padding: 18px 20px; border-bottom: 0.5px solid var(--border); display: flex; justify-content: space-between; align-items: center; flex-shrink: 0; }
+  .drawer-head h2 { font-family: var(--font-mono); font-size: 12px; letter-spacing: 0.18em; text-transform: uppercase; color: var(--text); font-weight: 500; }
+  .drawer-body { flex: 1; overflow-y: auto; padding: 20px; }
+  .drawer-body::-webkit-scrollbar { width: 4px; } .drawer-body::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 2px; }
+
+  .field { margin-bottom: 18px; }
+  .field label { display: block; font-family: var(--font-mono); font-size: 10px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--dim); margin-bottom: 7px; }
+  .input, .select {
+    width: 100%; background: var(--bg); border: 0.5px solid var(--border2); color: var(--text);
+    padding: 9px 11px; border-radius: 6px; font-family: var(--font-body); font-size: 13px;
+  }
+  .input:focus, .select:focus { outline: none; border-color: var(--accent); }
+
+  .section-title { font-family: var(--font-mono); font-size: 10px; letter-spacing: 0.16em; text-transform: uppercase; color: var(--muted); margin: 22px 0 10px; padding-top: 16px; border-top: 0.5px solid var(--border); }
+
+  .step-row { display: grid; grid-template-columns: 18px 1fr 64px auto; gap: 7px; align-items: center; margin-bottom: 7px; }
+  .step-row .s-n { font-family: var(--font-mono); font-size: 10px; color: var(--faint); text-align: center; }
+  .step-row .input { padding: 7px 9px; font-size: 12px; }
+  .step-row .dur { text-align: center; font-family: var(--font-mono); }
+  .row-btns { display: flex; gap: 3px; }
+  .mini { background: var(--surface); border: 0.5px solid var(--border2); color: var(--muted); width: 24px; height: 28px; border-radius: 5px; cursor: pointer; font-size: 12px; display: flex; align-items: center; justify-content: center; transition: .12s; }
+  .mini:hover { border-color: var(--accent); color: var(--text); }
+  .mini.del:hover { border-color: var(--danger); color: var(--danger); }
+  .add-step { width: 100%; margin-top: 6px; background: transparent; border: 0.5px dashed var(--border2); color: var(--muted); padding: 9px; border-radius: 6px; cursor: pointer; font-family: var(--font-mono); font-size: 11px; letter-spacing: .08em; transition: .12s; }
+  .add-step:hover { border-color: var(--accent); color: var(--accent); }
+
+  .preset-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; }
+  .preset { display: flex; align-items: center; gap: 8px; background: var(--bg); border: 0.5px solid var(--border2); border-radius: 7px; padding: 9px 11px; cursor: pointer; transition: .12s; }
+  .preset:hover { border-color: var(--accent); }
+  .preset.sel { border-color: var(--accent); background: var(--surface); }
+  .swatch { width: 22px; height: 22px; border-radius: 5px; flex-shrink: 0; border: 0.5px solid rgba(255,255,255,.1); }
+  .preset span { font-size: 12px; color: var(--text); }
+
+  .accent-row { display: flex; align-items: center; gap: 10px; }
+  .accent-row input[type=color] { width: 44px; height: 34px; border: 0.5px solid var(--border2); border-radius: 6px; background: var(--bg); cursor: pointer; }
+
+  .checkbox-row { display: flex; align-items: center; gap: 9px; margin-bottom: 9px; cursor: pointer; }
+  .checkbox-row input { width: 15px; height: 15px; accent-color: var(--accent); }
+  .checkbox-row span { font-size: 13px; color: var(--text); }
+
+  .hint-note { font-size: 11px; color: var(--dim); line-height: 1.5; margin-top: 6px; }
+
+  /* TOAST */
+  .toast {
+    position: fixed; bottom: 26px; left: 50%; transform: translateX(-50%) translateY(20px);
+    background: var(--surface); border: 0.5px solid var(--border2); color: var(--text);
+    padding: 11px 20px; border-radius: 8px; font-family: var(--font-mono); font-size: 12px;
+    letter-spacing: .06em; opacity: 0; pointer-events: none; transition: .25s; z-index: 200;
+  }
+  .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+  .toast.warn { border-color: var(--warn); }
+
+  @keyframes flash { 0%,100%{opacity:1} 50%{opacity:.1} }
+  .flashing { animation: flash 0.35s ease-in-out 8; }
+  @media (prefers-reduced-motion: reduce) { .flashing { animation: none; } .drawer { transition: none; } }
+
+  @media (max-width: 720px) {
+    .main { grid-template-columns: 1fr; grid-template-rows: 1fr auto; }
+    .side { border-right: none; border-top: 0.5px solid var(--border); max-height: 38vh; }
+    .clock { font-size: clamp(72px, 22vw, 120px); }
+  }
+</style>
+</head>
+<body>
+
+<div class="cuestack" id="root">
+  <header class="header">
+    <div class="brand" id="brand">CueStack · Step Timer</div>
+    <div class="header-right">
+      <div class="status"><div class="dot" id="dot"></div><span id="status-txt">STANDBY</span></div>
+      <button class="hbtn" onclick="openFS()">⤢ FULLSCREEN</button>
+      <button class="hbtn" onclick="share()">↗ SHARE</button>
+      <button class="hbtn primary" onclick="openBuilder()">✎ BUILD</button>
+    </div>
+  </header>
+
+  <div class="main">
+    <div class="clock-panel">
+      <div class="cue-number" id="cue-number"></div>
+      <div class="cue-label" id="cue-label">— select a step to begin —</div>
+      <div class="clock" id="clock">00:00</div>
+      <div class="progress-wrap"><div class="progress" id="progress" style="width:100%"></div></div>
+      <div class="controls">
+        <button class="btn btn-start" id="start-btn" onclick="engine.toggle()">▶ Start</button>
+        <button class="btn btn-ghost" onclick="engine.reset()">↺ Reset</button>
+      </div>
+      <div class="next-hint" id="next-hint"></div>
+      <div class="done-banner" id="done-banner">✓ Time's Up</div>
+    </div>
+
+    <div class="side">
+      <div class="cue-head">
+        <div class="cue-head-title" id="cue-head-title">Steps</div>
+        <div class="cue-total" id="cue-total"></div>
+      </div>
+      <div class="cue-list" id="cue-list"></div>
+      <div class="ad-slot" id="ad-slot"><!-- AdSlot: self-promo strategy --></div>
+    </div>
+  </div>
+</div>
+
+<!-- FULLSCREEN -->
+<div class="fs" id="fs">
+  <button class="fs-exit" onclick="closeFS()">ESC · EXIT</button>
+  <div class="fs-num" id="fs-num"></div>
+  <div class="fs-label" id="fs-label">—</div>
+  <div class="fs-clock" id="fs-clock">00:00</div>
+  <div class="fs-bar-wrap"><div class="fs-bar" id="fs-bar" style="width:100%"></div></div>
+  <div class="fs-next" id="fs-next"></div>
+</div>
+
+<!-- BUILDER DRAWER -->
+<div class="scrim" id="scrim" onclick="closeBuilder()"></div>
+<aside class="drawer" id="drawer" aria-label="Timer builder">
+  <div class="drawer-head">
+    <h2>Build Timer</h2>
+    <button class="hbtn" onclick="closeBuilder()">✕ DONE</button>
+  </div>
+  <div class="drawer-body">
+    <div class="field">
+      <label>Timer title</label>
+      <input class="input" id="b-title" placeholder="e.g. Morning Workshop" />
+    </div>
+    <div class="field">
+      <label>Highlighted word (optional)</label>
+      <input class="input" id="b-accent-word" placeholder="e.g. your brand" />
+      <div class="hint-note">Shown in the accent colour at the start of the title.</div>
+    </div>
+
+    <div class="section-title">Steps</div>
+    <div id="b-steps"></div>
+    <button class="add-step" onclick="builderAddStep()">+ Add step</button>
+
+    <div class="section-title">Theme</div>
+    <div class="preset-grid" id="b-presets"></div>
+    <div class="field" style="margin-top:14px;">
+      <label>Custom accent</label>
+      <div class="accent-row">
+        <input type="color" id="b-accent" onchange="builderSetAccent(this.value)" />
+        <span class="hint-note" style="margin:0;">Overrides the preset accent colour.</span>
+      </div>
+    </div>
+
+    <div class="section-title">Options</div>
+    <label class="checkbox-row"><input type="checkbox" id="b-audio" /><span>Audio alert at step end</span></label>
+    <label class="checkbox-row"><input type="checkbox" id="b-progress" /><span>Show progress bar</span></label>
+
+    <div class="section-title">Ad slot (per-deployment)</div>
+    <div class="field">
+      <label>Strategy</label>
+      <select class="select" id="b-ad" onchange="renderAdSlot()">
+        <option value="selfPromo">Self-promo (your offerings)</option>
+        <option value="none">None (clean tool)</option>
+      </select>
+      <div class="hint-note">Prototype shows self-promo + clean modes. A "network" strategy (consent-gated) is specced for Phase 6.</div>
+    </div>
+  </div>
+</aside>
+
+<div class="toast" id="toast"></div>
+
+<script>
+/* ============================================================
+   DATA LAYER — schema + presets + sample (docs/02-ARCHITECTURE)
+   ============================================================ */
+const SCHEMA_VERSION = 1;
+let _seq = 0;
+const uid = () => 's' + (Date.now().toString(36)) + (_seq++).toString(36);
+
+const PRESETS = {
+  retreatAmber: {
+    label: 'Retreat Amber', preset: 'retreatAmber',
+    colors: { bg:'#0d0e11', bg2:'#111216', surface:'#1a1b20', border:'#1e1f24', border2:'#2a2b30',
+              text:'#e8e6df', muted:'#888', dim:'#555', faint:'#333', accent:'#f5a623', warn:'#f5a623', danger:'#e05c5c', ok:'#4caf7d' },
+    fonts: { display:"'Bebas Neue', sans-serif", body:"'DM Sans', sans-serif", mono:"'DM Mono', monospace" },
+    thresholds: { warn:0.25, danger:0.10 }
+  },
+  midnight: {
+    label: 'Midnight', preset: 'midnight',
+    colors: { bg:'#0a0f1a', bg2:'#0e1424', surface:'#16203a', border:'#172036', border2:'#26324d',
+              text:'#e6ecf7', muted:'#8595b3', dim:'#566179', faint:'#33415e', accent:'#6ea8fe', warn:'#ffc857', danger:'#ff6b6b', ok:'#4dd4ac' },
+    fonts: { display:"'Space Grotesk', sans-serif", body:"'Inter', sans-serif", mono:"'DM Mono', monospace" },
+    thresholds: { warn:0.25, danger:0.10 }
+  },
+  forest: {
+    label: 'Forest', preset: 'forest',
+    colors: { bg:'#0c130f', bg2:'#101a14', surface:'#17241c', border:'#19271e', border2:'#283a2e',
+              text:'#e8f0e8', muted:'#86a08c', dim:'#566b5b', faint:'#33453a', accent:'#7bc47f', warn:'#e3b341', danger:'#e0685c', ok:'#7bc47f' },
+    fonts: { display:"'Bebas Neue', sans-serif", body:"'DM Sans', sans-serif", mono:"'DM Mono', monospace" },
+    thresholds: { warn:0.25, danger:0.10 }
+  },
+  daylight: {
+    label: 'Daylight', preset: 'daylight',
+    colors: { bg:'#f4f2ec', bg2:'#ffffff', surface:'#eceae2', border:'#e0ddd3', border2:'#d2cec1',
+              text:'#23211c', muted:'#6b6657', dim:'#9a9482', faint:'#c2bdae', accent:'#d4791f', warn:'#d4791f', danger:'#d0453b', ok:'#3d9a6b' },
+    fonts: { display:"'Space Grotesk', sans-serif", body:"'Inter', sans-serif", mono:"'DM Mono', monospace" },
+    thresholds: { warn:0.25, danger:0.10 }
+  }
+};
+
+const OFFERINGS = [
+  { title: 'Work with me 1:1', blurb: 'Coaching & facilitation for teams and retreats.', href: '#', cta: 'Learn more →' },
+  { title: 'Free utilities', blurb: 'More free tools like this one.', href: '#', cta: 'Browse →' }
+];
+
+function sampleConfig() {
+  return {
+    version: SCHEMA_VERSION,
+    title: 'Morning Workshop',
+    brandAccent: 'CueStack',
+    steps: [
+      { id: uid(), name: 'Welcome & Intentions', durationSecs: 5 * 60 },
+      { id: uid(), name: 'Opening Exercise',      durationSecs: 12 * 60 },
+      { id: uid(), name: 'Break',                 durationSecs: 10 * 60 },
+      { id: uid(), name: 'Group Discussion',      durationSecs: 20 * 60 },
+      { id: uid(), name: 'Wrap-up & Next Steps',  durationSecs: 8 * 60 },
+    ],
+    theme: { ...clone(PRESETS.retreatAmber) },
+    options: { audioAlert: true, showProgressBar: true, autoAdvance: false },
+    ad: { strategy: 'selfPromo' }
+  };
+}
+
+const clone = (o) => JSON.parse(JSON.stringify(o));
+
+/* ---- validation (minimal, prototype) ---- */
+function validate(cfg) {
+  if (!cfg || typeof cfg !== 'object') throw new Error('bad config');
+  cfg.version = SCHEMA_VERSION;
+  cfg.title = String(cfg.title || 'Untitled Timer');
+  cfg.steps = Array.isArray(cfg.steps) ? cfg.steps : [];
+  cfg.steps = cfg.steps
+    .filter(s => s && s.name && Number(s.durationSecs) > 0)
+    .map(s => ({ id: s.id || uid(), name: String(s.name), durationSecs: Math.round(Number(s.durationSecs)), note: s.note }));
+  cfg.theme = cfg.theme || clone(PRESETS.retreatAmber);
+  cfg.options = Object.assign({ audioAlert:true, showProgressBar:true, autoAdvance:false }, cfg.options || {});
+  cfg.ad = cfg.ad || { strategy: 'selfPromo' };
+  return cfg;
+}
+function migrate(raw) { /* v1 = identity; future versions switch here */ return raw; }
+
+/* ============================================================
+   PERSISTENCE — codec (URL) + localStorage draft
+   ============================================================ */
+const MAX_URL_LENGTH = 1800;
+const DRAFT_KEY = 'cuestack:draft';
+
+const ConfigCodec = {
+  encode(cfg) {
+    const json = JSON.stringify(validate(clone(cfg)));
+    // prototype: UTF-8 safe base64 (no LZ dep). Phase 4 swaps in lz-string.
+    return btoa(unescape(encodeURIComponent(json)));
+  },
+  decode(param) {
+    const json = decodeURIComponent(escape(atob(param)));
+    return validate(migrate(JSON.parse(json)));
+  }
+};
+
+function saveDraft(cfg) { try { localStorage.setItem(DRAFT_KEY, JSON.stringify(cfg)); } catch(e){} }
+function loadDraft() { try { const r = localStorage.getItem(DRAFT_KEY); return r ? validate(migrate(JSON.parse(r))) : null; } catch(e){ return null; } }
+
+/* ============================================================
+   ENGINE — wall-clock finite state machine (docs/02)
+   States: IDLE READY RUNNING PAUSED FINISHED
+   ============================================================ */
+class TimerEngine {
+  constructor(now = () => Date.now()) {
+    this.now = now;
+    this.cfg = null;
+    this.state = 'IDLE';
+    this.index = -1;
+    this.remainingSecs = 0;
+    this.totalSecs = 0;
+    this.endsAt = 0;
+    this.ticker = null;
+    this.listeners = {};
+  }
+  on(evt, fn) { (this.listeners[evt] ||= []).push(fn); return this; }
+  emit(evt, payload) { (this.listeners[evt] || []).forEach(fn => fn(payload)); }
+
+  load(cfg) { this.stop_(); this.cfg = cfg; this.state = 'IDLE'; this.index = -1; this.remainingSecs = 0; this.totalSecs = 0; this.emit('statechange', { state: this.state }); this.emit('stepchange', this.stepInfo()); this.emitTick(); }
+
+  stepInfo() {
+    const step = this.cfg && this.index >= 0 ? this.cfg.steps[this.index] : null;
+    const next = this.cfg && this.index >= 0 ? this.cfg.steps[this.index + 1] || null : null;
+    return { index: this.index, step, nextStep: next, count: this.cfg ? this.cfg.steps.length : 0 };
+  }
+  urgency() {
+    if (this.totalSecs === 0) return 'normal';
+    const f = this.remainingSecs / this.totalSecs;
+    const t = this.cfg.theme.thresholds;
+    if (f <= t.danger) return 'danger';
+    if (f <= t.warn) return 'warn';
+    return 'normal';
+  }
+  emitTick() {
+    this.emit('tick', { remainingSecs: this.remainingSecs, totalSecs: this.totalSecs,
+      fraction: this.totalSecs ? this.remainingSecs / this.totalSecs : 1, urgency: this.urgency(), running: this.state === 'RUNNING' });
+  }
+
+  selectStep(i) {
+    if (!this.cfg || i < 0 || i >= this.cfg.steps.length) return;
+    this.stop_();
+    this.index = i;
+    this.totalSecs = this.cfg.steps[i].durationSecs;
+    this.remainingSecs = this.totalSecs;
+    this.state = 'READY';
+    this.emit('statechange', { state: this.state });
+    this.emit('stepchange', this.stepInfo());
+    this.emitTick();
+  }
+  start() {
+    if (!this.cfg || this.index < 0 || this.remainingSecs <= 0) return;
+    if (this.state === 'RUNNING') return;
+    this.endsAt = this.now() + this.remainingSecs * 1000;
+    this.state = 'RUNNING';
+    this.emit('statechange', { state: this.state });
+    this.ticker = setInterval(() => this.tick_(), 250);
+    this.emitTick();
+  }
+  tick_() {
+    const rem = Math.max(0, Math.round((this.endsAt - this.now()) / 1000));
+    if (rem !== this.remainingSecs) { this.remainingSecs = rem; this.emitTick(); }
+    if (rem <= 0) { this.stop_(); this.state = 'FINISHED'; this.emit('statechange', { state: this.state }); this.emit('finished', { step: this.cfg.steps[this.index] }); }
+  }
+  pause() {
+    if (this.state !== 'RUNNING') return;
+    this.remainingSecs = Math.max(0, Math.round((this.endsAt - this.now()) / 1000));
+    this.stop_(); this.state = 'PAUSED';
+    this.emit('statechange', { state: this.state }); this.emitTick();
+  }
+  toggle() { if (this.state === 'RUNNING') this.pause(); else this.start(); }
+  reset() {
+    if (this.index < 0) return;
+    this.stop_();
+    this.remainingSecs = this.totalSecs = this.cfg.steps[this.index].durationSecs;
+    this.state = 'READY';
+    this.emit('statechange', { state: this.state }); this.emitTick();
+  }
+  next() { if (this.cfg && this.index < this.cfg.steps.length - 1) this.selectStep(this.index + 1); }
+  prev() { if (this.index > 0) this.selectStep(this.index - 1); }
+  stop_() { if (this.ticker) { clearInterval(this.ticker); this.ticker = null; } }
+}
+
+/* ============================================================
+   FORMAT helpers (ported from original)
+   ============================================================ */
+const pad = n => String(n).padStart(2, '0');
+function fmt(s) { const h = Math.floor(s/3600), m = Math.floor((s%3600)/60), sec = s%60; return h>0 ? `${h}:${pad(m)}:${pad(sec)}` : `${pad(m)}:${pad(sec)}`; }
+function fmtShort(s) { const h = Math.floor(s/3600), m = Math.floor((s%3600)/60); if (h>0&&m>0) return `${h}h ${m}m`; if (h>0) return `${h}h`; return `${m}m`; }
+function fmtMMSS(s) { return `${pad(Math.floor(s/60))}:${pad(s%60)}`; }
+function parseMMSS(str) { const p = String(str).split(':').map(x => parseInt(x,10) || 0); return p.length === 2 ? p[0]*60 + p[1] : (p[0] || 0); }
+
+/* ============================================================
+   THEME PROVIDER — tokens -> CSS custom properties
+   ============================================================ */
+function applyTheme(theme) {
+  const root = document.getElementById('root');
+  const c = theme.colors, f = theme.fonts;
+  const set = (k, v) => root.style.setProperty(k, v);
+  set('--bg',c.bg); set('--bg2',c.bg2); set('--surface',c.surface); set('--border',c.border); set('--border2',c.border2);
+  set('--text',c.text); set('--muted',c.muted); set('--dim',c.dim); set('--faint',c.faint);
+  set('--accent',c.accent); set('--warn',c.warn); set('--danger',c.danger); set('--ok',c.ok);
+  set('--font-display',f.display); set('--font-body',f.body); set('--font-mono',f.mono);
+  // fullscreen overlay lives outside .cuestack — mirror key tokens to :root
+  const r2 = document.documentElement.style;
+  ['--bg','--surface','--text','--warn','--danger','--ok','--faint','--border','--border2','--muted','--dim','--accent','--font-display','--font-mono']
+    .forEach(k => r2.setProperty(k, root.style.getPropertyValue(k)));
+  document.body.style.background = c.bg;
+}
+
+/* ============================================================
+   VIEW — player rendering bound to engine events
+   ============================================================ */
+let config = null;
+const engine = new TimerEngine();
+const $ = id => document.getElementById(id);
+
+engine.on('tick', ({ remainingSecs, fraction, urgency, running }) => {
+  const txt = fmt(remainingSecs);
+  const cls = urgency === 'danger' ? 'danger' : urgency === 'warn' ? 'warn' : '';
+  $('clock').textContent = txt; $('fs-clock').textContent = txt;
+  $('clock').className = 'clock ' + cls; $('fs-clock').className = 'fs-clock ' + cls;
+  const pct = (fraction * 100) + '%';
+  $('progress').style.width = pct; $('fs-bar').style.width = pct;
+  $('progress').className = 'progress ' + cls;
+  $('fs-bar').style.background = cls === 'danger' ? 'var(--danger)' : cls === 'warn' ? 'var(--warn)' : 'var(--ok)';
+  const dot = $('dot'), st = $('status-txt');
+  if (running) { dot.className = 'dot ' + (cls || 'running'); st.textContent = cls === 'danger' ? 'URGENT' : cls === 'warn' ? 'WARNING' : 'RUNNING'; }
+});
+
+engine.on('statechange', ({ state }) => {
+  const b = $('start-btn');
+  if (state === 'RUNNING') { b.textContent = '⏸ Pause'; b.classList.add('running'); }
+  else { b.textContent = '▶ Start'; b.classList.remove('running'); }
+  if (state !== 'RUNNING' && state !== 'FINISHED') { $('dot').className = 'dot'; $('status-txt').textContent = state === 'READY' ? 'READY' : 'STANDBY'; }
+  if (state === 'READY') $('done-banner').style.display = 'none';
+});
+
+engine.on('stepchange', ({ index, step, nextStep, count }) => {
+  if (step) {
+    $('cue-label').textContent = step.name; $('cue-label').className = 'cue-label active';
+    $('cue-number').textContent = `STEP ${index + 1} OF ${count}`;
+    $('fs-label').textContent = step.name; $('fs-num').textContent = `${index + 1} / ${count}`;
+    $('next-hint').textContent = nextStep ? `next: ${nextStep.name} · ${fmtShort(nextStep.durationSecs)}` : 'last step';
+    $('fs-next').textContent = nextStep ? `up next · ${nextStep.name}` : '';
+  } else {
+    $('cue-label').textContent = count ? '— select a step to begin —' : '— no steps yet · open Build —';
+    $('cue-label').className = 'cue-label'; $('cue-number').textContent = '';
+    $('next-hint').textContent = '';
+  }
+  renderList();
+});
+
+engine.on('finished', () => {
+  $('done-banner').style.display = 'block';
+  if (config.options.audioAlert) beep();
+  ['clock','fs-clock'].forEach(id => { const el = $(id); el.classList.add('flashing'); setTimeout(() => el.classList.remove('flashing'), 3200); });
+});
+
+function renderList() {
+  const list = $('cue-list'); list.innerHTML = '';
+  if (!config.steps.length) { list.innerHTML = '<div class="empty-state" style="padding:30px 10px;">No steps yet.<br>Open <b style="color:var(--accent)">Build</b> to add some.</div>'; return; }
+  config.steps.forEach((step, i) => {
+    const el = document.createElement('div');
+    el.className = 'cue-item' + (i === engine.index ? ' active' : '');
+    el.innerHTML = `<div class="cue-n">${i+1}</div><div class="cue-nm">${escapeHtml(step.name)}</div><div class="cue-d">${fmtShort(step.durationSecs)}</div>`;
+    el.onclick = () => engine.selectStep(i);
+    list.appendChild(el);
+  });
+  if (engine.index >= 0) list.children[engine.index]?.scrollIntoView({ block: 'nearest' });
+}
+
+function renderHeader() {
+  const t = config.title, a = config.brandAccent;
+  $('brand').innerHTML = a && t.includes(a) ? escapeHtml(t).replace(escapeHtml(a), `<b>${escapeHtml(a)}</b>`) : (a ? `<b>${escapeHtml(a)}</b> · ${escapeHtml(t)}` : escapeHtml(t));
+  document.title = t + ' · CueStack';
+  $('cue-total').textContent = `${config.steps.length} steps · ${fmtShort(config.steps.reduce((a,s)=>a+s.durationSecs,0))}`;
+  document.querySelector('.progress-wrap').style.display = config.options.showProgressBar ? '' : 'none';
+}
+
+function renderAdSlot() {
+  const strat = $('b-ad') ? $('b-ad').value : (config.ad?.strategy || 'selfPromo');
+  config.ad = { strategy: strat };
+  const slot = $('ad-slot');
+  if (strat === 'none') { slot.innerHTML = ''; slot.style.display = 'none'; return; }
+  slot.style.display = '';
+  const o = OFFERINGS[0];
+  slot.innerHTML = `<div class="ad-tag">Sponsored · ${escapeHtml(config.title)}</div>
+    <a class="ad-card" href="${o.href}"><div class="ad-title">${escapeHtml(o.title)}</div>
+    <div class="ad-blurb">${escapeHtml(o.blurb)}</div><span class="ad-cta">${escapeHtml(o.cta)}</span></a>`;
+}
+
+const escapeHtml = s => String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+
+/* ---- whole-app render ---- */
+function applyConfig(cfg, { resetEngine = true } = {}) {
+  config = validate(cfg);
+  applyTheme(config.theme);
+  renderHeader();
+  renderAdSlot();
+  if (resetEngine) engine.load(config); else { engine.cfg = config; renderList(); }
+  saveDraft(config);
+}
+
+/* ============================================================
+   AUDIO (lazy, unlocked by user gesture)
+   ============================================================ */
+let audioCtx = null;
+function beep() {
+  try {
+    if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    [0,350,700,1100].forEach(d => setTimeout(() => {
+      const osc = audioCtx.createOscillator(), g = audioCtx.createGain();
+      osc.connect(g); g.connect(audioCtx.destination); osc.type = 'square';
+      osc.frequency.setValueAtTime(960, audioCtx.currentTime);
+      osc.frequency.setValueAtTime(720, audioCtx.currentTime + 0.1);
+      g.gain.setValueAtTime(0.3, audioCtx.currentTime);
+      g.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.4);
+      osc.start(audioCtx.currentTime); osc.stop(audioCtx.currentTime + 0.4);
+    }, d));
+  } catch(e) {}
+}
+
+/* ============================================================
+   FULLSCREEN
+   ============================================================ */
+function openFS() { $('fs').classList.add('show'); const el = $('fs'); if (el.requestFullscreen) el.requestFullscreen().catch(()=>{}); }
+function closeFS() { $('fs').classList.remove('show'); if (document.fullscreenElement) document.exitFullscreen().catch(()=>{}); }
+
+/* ============================================================
+   SHARE (URL codec + clipboard)
+   ============================================================ */
+function share() {
+  const param = ConfigCodec.encode(config);
+  const url = location.origin + location.pathname + '?t=' + param;
+  if (url.length > MAX_URL_LENGTH) {
+    // overflow fallback would store a local slug (Phase 4). Prototype warns.
+    toast('Link is long (' + url.length + ' chars) — trim steps for a shorter link', true);
+  }
+  navigator.clipboard?.writeText(url).then(() => toast('Share link copied to clipboard')).catch(() => prompt('Copy this link:', url));
+}
+
+function toast(msg, warn) {
+  const t = $('toast'); t.textContent = msg; t.className = 'toast show' + (warn ? ' warn' : '');
+  clearTimeout(toast._t); toast._t = setTimeout(() => t.className = 'toast', 2600);
+}
+
+/* ============================================================
+   BUILDER
+   ============================================================ */
+function openBuilder() { $('scrim').classList.add('show'); $('drawer').classList.add('show'); renderBuilder(); }
+function closeBuilder() { $('scrim').classList.remove('show'); $('drawer').classList.remove('show'); }
+
+function renderBuilder() {
+  $('b-title').value = config.title;
+  $('b-accent-word').value = config.brandAccent || '';
+  $('b-audio').checked = config.options.audioAlert;
+  $('b-progress').checked = config.options.showProgressBar;
+  $('b-accent').value = toHex(config.theme.colors.accent);
+  $('b-ad').value = config.ad?.strategy || 'selfPromo';
+  renderBuilderSteps();
+  renderPresets();
+}
+
+function renderBuilderSteps() {
+  const box = $('b-steps'); box.innerHTML = '';
+  config.steps.forEach((s, i) => {
+    const row = document.createElement('div'); row.className = 'step-row';
+    row.innerHTML = `
+      <div class="s-n">${i+1}</div>
+      <input class="input" value="${escapeHtml(s.name)}" data-i="${i}" data-k="name" placeholder="Step name" />
+      <input class="input dur" value="${fmtMMSS(s.durationSecs)}" data-i="${i}" data-k="dur" placeholder="mm:ss" />
+      <div class="row-btns">
+        <button class="mini" data-i="${i}" data-act="up" title="Move up">↑</button>
+        <button class="mini" data-i="${i}" data-act="down" title="Move down">↓</button>
+        <button class="mini del" data-i="${i}" data-act="del" title="Delete">✕</button>
+      </div>`;
+    box.appendChild(row);
+  });
+  box.querySelectorAll('input').forEach(inp => inp.addEventListener('input', onStepEdit));
+  box.querySelectorAll('button').forEach(b => b.addEventListener('click', onStepAction));
+}
+
+function onStepEdit(e) {
+  const i = +e.target.dataset.i, k = e.target.dataset.k;
+  if (k === 'name') config.steps[i].name = e.target.value;
+  else config.steps[i].durationSecs = Math.max(1, parseMMSS(e.target.value));
+  liveApply();
+  // if we just edited the duration of the currently-selected step and it isn't
+  // running, refresh the clock to the new full duration
+  if (k === 'dur' && i === engine.index && (engine.state === 'READY' || engine.state === 'FINISHED')) engine.selectStep(i);
+}
+function onStepAction(e) {
+  const i = +e.target.dataset.i, act = e.target.dataset.act;
+  if (act === 'del') config.steps.splice(i, 1);
+  else if (act === 'up' && i > 0) [config.steps[i-1], config.steps[i]] = [config.steps[i], config.steps[i-1]];
+  else if (act === 'down' && i < config.steps.length - 1) [config.steps[i+1], config.steps[i]] = [config.steps[i], config.steps[i+1]];
+  liveApply(); renderBuilderSteps();
+}
+function builderAddStep() { config.steps.push({ id: uid(), name: 'New step', durationSecs: 300 }); liveApply(); renderBuilderSteps(); }
+
+function renderPresets() {
+  const grid = $('b-presets'); grid.innerHTML = '';
+  Object.values(PRESETS).forEach(p => {
+    const el = document.createElement('div');
+    el.className = 'preset' + (config.theme.preset === p.preset ? ' sel' : '');
+    el.innerHTML = `<div class="swatch" style="background:${p.colors.accent}"></div><span>${p.label}</span>`;
+    el.onclick = () => { config.theme = clone(PRESETS[p.preset]); applyConfig(config, { resetEngine: false }); renderBuilder(); };
+    grid.appendChild(el);
+  });
+}
+function builderSetAccent(hex) {
+  config.theme.colors.accent = hex; config.theme.colors.warn = hex; config.theme.preset = 'custom';
+  applyConfig(config, { resetEngine: false }); renderPresets();
+}
+
+/* live-apply builder edits without restarting a running timer */
+function liveApply() {
+  config.title = $('b-title').value || 'Untitled Timer';
+  config.brandAccent = $('b-accent-word').value || '';
+  config.options.audioAlert = $('b-audio').checked;
+  config.options.showProgressBar = $('b-progress').checked;
+  renderHeader(); renderAdSlot(); renderList(); saveDraft(config);
+}
+['b-title','b-accent-word'].forEach(id => $(id).addEventListener('input', liveApply));
+['b-audio','b-progress'].forEach(id => $(id).addEventListener('change', liveApply));
+
+const toHex = c => { if (c.startsWith('#')) return c.length === 4 ? '#'+[...c.slice(1)].map(x=>x+x).join('') : c; return '#f5a623'; };
+
+/* ============================================================
+   KEYBOARD
+   ============================================================ */
+document.addEventListener('keydown', e => {
+  if ($('drawer').classList.contains('show')) { if (e.code === 'Escape') closeBuilder(); return; }
+  if (e.code === 'Escape') closeFS();
+  if (e.code === 'KeyF') openFS();
+  if (e.code === 'Space' && engine.index >= 0) { e.preventDefault(); engine.toggle(); }
+});
+
+/* ============================================================
+   BOOT — resolve config: ?t= -> draft -> sample
+   ============================================================ */
+(function boot() {
+  const param = new URLSearchParams(location.search).get('t');
+  let cfg = null;
+  if (param) {
+    try { cfg = ConfigCodec.decode(param); }
+    catch (e) { setTimeout(() => toast('Could not read that link — loaded a sample', true), 400); }
+  }
+  if (!cfg) cfg = loadDraft();
+  if (!cfg) cfg = sampleConfig();
+  applyConfig(cfg);
+})();
+</script>
+</body>
+</html>

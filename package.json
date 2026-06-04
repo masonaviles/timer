@@ -1,0 +1,49 @@
+{
+  "name": "@masonaviles/cuestack",
+  "version": "0.0.0",
+  "description": "White-label, themeable, step-by-step cue timer. Framework-free core + view layer, shippable as a package.",
+  "type": "module",
+  "license": "UNLICENSED",
+  "author": "Mason Aviles",
+  "sideEffects": ["*.css"],
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    },
+    "./engine": {
+      "types": "./dist/engine/index.d.ts",
+      "import": "./dist/engine/index.js"
+    },
+    "./data": {
+      "types": "./dist/data/index.d.ts",
+      "import": "./dist/data/index.js"
+    },
+    "./persistence": {
+      "types": "./dist/persistence/index.d.ts",
+      "import": "./dist/persistence/index.js"
+    }
+  },
+  "files": ["dist"],
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "coverage": "vitest run --coverage",
+    "lint": "biome check .",
+    "lint:fix": "biome check --write .",
+    "format": "biome format --write .",
+    "check": "npm run lint && npm run typecheck && npm run test"
+  },
+  "dependencies": {
+    "lz-string": "^1.5.0",
+    "nanoid": "^5.0.0"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "^1.9.0",
+    "@vitest/coverage-v8": "^2.1.0",
+    "typescript": "^5.6.0",
+    "vitest": "^2.1.0"
+  }
+}

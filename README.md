@@ -6,14 +6,22 @@ package and embeds into an Astro site. (Working codename; see
 
 ## Status
 
-**Phase 5 — Astro integration.** Player, builder, theming, persistence/sharing are built and
-tested; the package is publishable (`./player`, `./builder`, `./engine`, `./data`,
-`./persistence` entry points + bundled CSS). Astro route/island templates live in
-[examples/astro/](examples/astro/README.md). Next: Phase 6 (ad slots).
-Full plan: [docs/](docs/README.md) · per-phase docs: [docs/phases/](docs/phases/README.md).
+**Phase 7 — launch-ready.** All seven phases complete: framework-free engine, Preact player
+(at parity with the original) + builder, theming, URL/localStorage sharing, a publishable
+package with Astro templates, pluggable ad slots, and a hardening pass (axe-clean a11y,
+backgrounded-tab resilience, edge cases). **105 tests** green.
+Full plan: [docs/](docs/README.md) · per-phase docs: [docs/phases/](docs/phases/README.md) ·
+end-user guide: [docs/USER-GUIDE.md](docs/USER-GUIDE.md).
 
 - `prototype.html` — a single-file working prototype (proof of the vision; not the package).
-- `BTMB_Retreat_Timer.html` — the original reference; the behavioural baseline for parity.
+- `reference/BTMB_Retreat_Timer.html` — the original, archived after parity sign-off.
+
+### Remaining before public launch
+- Supply real ad **offerings** (A3) — swap [src/ads/offerings.ts](src/ads/offerings.ts).
+- Drop the [Astro templates](examples/astro/README.md) into the live site and run
+  `astro dev` / `astro build` (the one check that needs the real site repo).
+- Manual cross-browser/mobile + screen-reader spot check, and a colour-contrast pass
+  (axe can't compute contrast headlessly).
 
 ## Use it (as a package)
 

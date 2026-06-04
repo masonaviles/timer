@@ -120,6 +120,15 @@ export class TimerEngine extends Emitter<EngineEventMap> {
     if (this.current > 0) this.selectStep(this.current - 1);
   }
 
+  /**
+   * Force an immediate recompute from the wall clock. Call when a backgrounded tab returns:
+   * setInterval is throttled while hidden, so the display can be seconds stale until the next
+   * tick — sync() catches it up at once. No-op unless RUNNING.
+   */
+  sync(): void {
+    if (this.st === 'RUNNING') this.tick();
+  }
+
   /** Stop the ticker and drop all listeners. */
   dispose(): void {
     this.ticker.stop();

@@ -288,6 +288,7 @@ export function Builder(props: BuilderProps) {
           <div class="cs-save-row">
             <input
               class="cs-input"
+              aria-label="Name this timer"
               value={saveName}
               onInput={(e) => setSaveName((e.target as HTMLInputElement).value)}
               placeholder="Name this timer"

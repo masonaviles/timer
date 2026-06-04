@@ -78,6 +78,19 @@ export function Player({ engine }: PlayerProps) {
     });
   }, [engine]);
 
+  // Catch up instantly when a backgrounded tab returns (setInterval is throttled while hidden).
+  useEffect(() => {
+    const onVisible = () => {
+      if (typeof document === 'undefined' || document.visibilityState === 'visible') engine.sync();
+    };
+    document.addEventListener('visibilitychange', onVisible);
+    window.addEventListener('focus', onVisible);
+    return () => {
+      document.removeEventListener('visibilitychange', onVisible);
+      window.removeEventListener('focus', onVisible);
+    };
+  }, [engine]);
+
   // Auto-scroll the active step into view in the list. The effect reads the active
   // element from the DOM, so the dependency on step.index is intentional.
   // biome-ignore lint/correctness/useExhaustiveDependencies: rerun when the active step changes
@@ -116,7 +129,13 @@ export function Player({ engine }: PlayerProps) {
     : step.step
       ? 'last step'
       : '';
-  const announcement = step.step ? `${step.step.name} — ${statusText(view).toLowerCase()}` : '';
+  // Announce step changes and completion — NOT every urgency tick (would be chatty).
+  const announcement =
+    view.state === 'FINISHED' && step.step
+      ? `Time's up. ${step.step.name} complete.`
+      : step.step
+        ? `Step ${step.index + 1} of ${step.count}: ${step.step.name}`
+        : '';
 
   return (
     <div class="cuestack" ref={rootRef}>
@@ -201,9 +220,10 @@ export function Player({ engine }: PlayerProps) {
         </div>
       </div>
 
-      <div class="cs-sr-only" aria-live="polite">
+      {/* <output> has an implicit role="status"; aria-live escalates on completion. */}
+      <output class="cs-sr-only" aria-live={view.state === 'FINISHED' ? 'assertive' : 'polite'}>
         {announcement}
-      </div>
+      </output>
 
       {fsOpen && (
         <Fullscreen view={view} flashing={flashing} rootRef={fsRef} onExit={closeFullscreen} />

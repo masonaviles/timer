@@ -71,6 +71,31 @@ describe('Player — controls', () => {
   });
 });
 
+describe('Player — edge cases', () => {
+  it('shows an empty state and disables Start with zero steps', () => {
+    const empty = { ...createSampleTimer(), steps: [] };
+    const engine = new TimerEngine(empty, { clock: createFakeClock(0), ticker: manualTicker() });
+    render(<Player engine={engine} />);
+    expect(screen.getByText('No steps yet.')).toBeTruthy();
+    expect((screen.getByRole('button', { name: /Start/ }) as HTMLButtonElement).disabled).toBe(
+      true,
+    );
+  });
+
+  it('renders a very long step name in the truncating element without crashing', () => {
+    const longName = 'A'.repeat(300);
+    const cfg = {
+      ...createSampleTimer(),
+      steps: [{ id: 'x', name: longName, durationSecs: 60 }],
+    };
+    const engine = new TimerEngine(cfg, { clock: createFakeClock(0), ticker: manualTicker() });
+    const { container } = render(<Player engine={engine} />);
+    // The name sits in .cs-cue-nm (CSS applies white-space/overflow/ellipsis — verified visually).
+    const nameEl = container.querySelector('.cs-cue-nm') as HTMLElement;
+    expect(nameEl.textContent).toBe(longName);
+  });
+});
+
 describe('Player — urgency colours', () => {
   it('escalates the clock to danger near the end', () => {
     const { clock, ticker, clockEl } = renderPlayer();

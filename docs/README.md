@@ -50,6 +50,7 @@ Full rationale + rejected alternatives for each in [06-DECISIONS.md](06-DECISION
 
 ## Current state
 
-- `BTMB_Retreat_Timer.html` — the original, working, single-file reference implementation.
-  Treat it as the **behavioural baseline**: the generalized player must preserve every
-  behaviour it has (see [04-GHERKIN-SPEC.md](04-GHERKIN-SPEC.md) Feature: Player Parity).
+- `../reference/BTMB_Retreat_Timer.html` — the original, archived after Phase 7 parity
+  sign-off. It was the **behavioural baseline**; the generalized player reproduces every
+  behaviour it had (see [04-GHERKIN-SPEC.md](04-GHERKIN-SPEC.md) Feature: Player Parity).
+- End-user instructions: [USER-GUIDE.md](USER-GUIDE.md).

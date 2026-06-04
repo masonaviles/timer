@@ -174,6 +174,21 @@ describe('urgency', () => {
     ticker.fire();
     expect(lastTick(ticks)?.urgency).toBe(expected);
   });
+
+  it('uses the theme-provided thresholds', () => {
+    const cfg = makeConfig([{ id: 'x', name: 'X', durationSecs: 100 }]);
+    cfg.theme.thresholds = { warn: 0.3, danger: 0.15 };
+    const clock = createFakeClock(0);
+    const ticker = manualTicker();
+    const engine = new TimerEngine(cfg, { clock, ticker });
+    const ticks: TickEvent[] = [];
+    engine.on('tick', (e) => ticks.push(e));
+    engine.selectStep(0);
+    engine.start();
+    clock.advance(72_000); // 28s left -> 0.28: warn under this theme (normal under the default 0.25)
+    ticker.fire();
+    expect(lastTick(ticks)?.urgency).toBe('warn');
+  });
 });
 
 describe('navigation', () => {

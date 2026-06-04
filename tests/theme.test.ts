@@ -1,6 +1,6 @@
-import { describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it } from 'vitest';
 import { RETREAT_AMBER } from '../src/data/presets.js';
-import { applyTheme } from '../src/view/theme.js';
+import { applyTheme, pickDefaultTheme, prefersDark } from '../src/view/theme.js';
 
 describe('applyTheme', () => {
   it('writes every colour and font token as a CSS custom property', () => {
@@ -20,5 +20,29 @@ describe('applyTheme', () => {
     custom.colors.accent = '#abcdef';
     applyTheme(el, custom);
     expect(el.style.getPropertyValue('--accent')).toBe('#abcdef');
+  });
+});
+
+describe('prefers-color-scheme', () => {
+  const original = window.matchMedia;
+  afterEach(() => {
+    window.matchMedia = original;
+  });
+
+  function stubMatchMedia(matches: boolean) {
+    window.matchMedia = ((query: string) =>
+      ({ matches, media: query }) as unknown as MediaQueryList) as typeof window.matchMedia;
+  }
+
+  it('picks a dark preset when the OS prefers dark', () => {
+    stubMatchMedia(true);
+    expect(prefersDark()).toBe(true);
+    expect(pickDefaultTheme().preset).toBe('retreatAmber');
+  });
+
+  it('picks the light preset when the OS prefers light', () => {
+    stubMatchMedia(false);
+    expect(prefersDark()).toBe(false);
+    expect(pickDefaultTheme().preset).toBe('daylight');
   });
 });

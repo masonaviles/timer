@@ -2,6 +2,7 @@
 // Theming is a pure data->variable mapping; no component reads a colour directly.
 // (Secondary shades like --border/--dim are DERIVED in styles.css from these.)
 
+import { DAYLIGHT, RETREAT_AMBER } from '../data/presets.js';
 import type { ThemeTokens } from '../data/schema.js';
 
 /** Map of theme token path -> CSS custom property name. */
@@ -31,4 +32,15 @@ export function applyTheme(el: HTMLElement, theme: ThemeTokens): void {
   for (const [key, varName] of Object.entries(FONT_VARS)) {
     el.style.setProperty(varName, theme.fonts[key as keyof ThemeTokens['fonts']]);
   }
+}
+
+/** Whether the user's OS prefers a dark colour scheme (defaults to dark off-DOM). */
+export function prefersDark(): boolean {
+  if (typeof window === 'undefined' || typeof window.matchMedia !== 'function') return true;
+  return window.matchMedia('(prefers-color-scheme: dark)').matches;
+}
+
+/** Pick a default preset when a config specifies none, honouring prefers-color-scheme. */
+export function pickDefaultTheme(): ThemeTokens {
+  return structuredClone(prefersDark() ? RETREAT_AMBER : DAYLIGHT);
 }

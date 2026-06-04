@@ -3,6 +3,6 @@
 export { Player, type PlayerProps } from './Player.js';
 export { Fullscreen, type FullscreenProps } from './Fullscreen.js';
 export { mountPlayer, type MountResult } from './mount.js';
-export { applyTheme } from './theme.js';
+export { applyTheme, pickDefaultTheme, prefersDark } from './theme.js';
 export { useEngine, type EngineView } from './useEngine.js';
 export { beep } from './audio.js';

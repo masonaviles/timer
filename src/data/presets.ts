@@ -1,10 +1,10 @@
-// Data layer — built-in theme presets + the canonical sample timer.
-// Phase 3 expands the preset set; this phase ports the original "Retreat Amber"
-// look and the original 19-step agenda (now in seconds) as the parity fixture.
+// Data layer — built-in theme presets, the canonical sample timer, and theme helpers.
+// Presets cover light + dark. This layer is pure (no DOM): prefers-color-scheme selection
+// lives in the view layer (view/theme.ts).
 
 import { SCHEMA_VERSION, type Step, type ThemeTokens, type TimerConfig } from './schema.js';
 
-/** Ported from the original BTMB_Retreat_Timer.html :root tokens. */
+/** Ported from the original BTMB_Retreat_Timer.html :root tokens (dark). */
 export const RETREAT_AMBER: ThemeTokens = {
   preset: 'retreatAmber',
   colors: {
@@ -25,6 +25,104 @@ export const RETREAT_AMBER: ThemeTokens = {
   },
   thresholds: { warn: 0.25, danger: 0.1 },
 };
+
+/** Cool, high-contrast dark. */
+export const MIDNIGHT: ThemeTokens = {
+  preset: 'midnight',
+  colors: {
+    bg: '#0a0f1a',
+    bg2: '#0e1424',
+    surface: '#16203a',
+    text: '#e6ecf7',
+    muted: '#8595b3',
+    accent: '#6ea8fe',
+    warn: '#ffc857',
+    danger: '#ff6b6b',
+    ok: '#4dd4ac',
+  },
+  fonts: {
+    display: "'Space Grotesk', sans-serif",
+    body: "'Inter', sans-serif",
+    mono: "'DM Mono', monospace",
+  },
+  thresholds: { warn: 0.25, danger: 0.1 },
+};
+
+/** Earthy dark. */
+export const FOREST: ThemeTokens = {
+  preset: 'forest',
+  colors: {
+    bg: '#0c130f',
+    bg2: '#101a14',
+    surface: '#17241c',
+    text: '#e8f0e8',
+    muted: '#86a08c',
+    accent: '#7bc47f',
+    warn: '#e3b341',
+    danger: '#e0685c',
+    ok: '#7bc47f',
+  },
+  fonts: {
+    display: "'Bebas Neue', sans-serif",
+    body: "'DM Sans', sans-serif",
+    mono: "'DM Mono', monospace",
+  },
+  thresholds: { warn: 0.25, danger: 0.1 },
+};
+
+/** Light theme for bright rooms / projectors. */
+export const DAYLIGHT: ThemeTokens = {
+  preset: 'daylight',
+  colors: {
+    bg: '#f4f2ec',
+    bg2: '#ffffff',
+    surface: '#eceae2',
+    text: '#23211c',
+    muted: '#6b6657',
+    accent: '#d4791f',
+    warn: '#d4791f',
+    danger: '#d0453b',
+    ok: '#3d9a6b',
+  },
+  fonts: {
+    display: "'Space Grotesk', sans-serif",
+    body: "'Inter', sans-serif",
+    mono: "'DM Mono', monospace",
+  },
+  thresholds: { warn: 0.25, danger: 0.1 },
+};
+
+/** Built-in presets keyed by id. */
+export const PRESETS: Record<string, ThemeTokens> = {
+  retreatAmber: RETREAT_AMBER,
+  midnight: MIDNIGHT,
+  forest: FOREST,
+  daylight: DAYLIGHT,
+};
+
+/** Stable display order for preset pickers (label + key). */
+export const PRESET_LIST: ReadonlyArray<{ key: string; label: string }> = [
+  { key: 'retreatAmber', label: 'Retreat Amber' },
+  { key: 'midnight', label: 'Midnight' },
+  { key: 'forest', label: 'Forest' },
+  { key: 'daylight', label: 'Daylight' },
+];
+
+/** A deep copy of a preset (or RETREAT_AMBER if the key is unknown). */
+export function clonePreset(key: string): ThemeTokens {
+  return structuredClone(PRESETS[key] ?? RETREAT_AMBER);
+}
+
+/**
+ * Produce a custom theme from a base with a new accent colour. Marks the theme `custom`.
+ * The single place the builder (Phase 4) derives a custom theme — keeps overrides consistent.
+ */
+export function withAccent(base: ThemeTokens, accent: string): ThemeTokens {
+  const next = structuredClone(base);
+  next.colors.accent = accent;
+  next.preset = 'custom';
+  return next;
+}
 
 function step(id: string, name: string, mins: number): Step {
   return { id, name, durationSecs: mins * 60 };
@@ -67,8 +165,3 @@ export function createSampleTimer(): TimerConfig {
     options: { audioAlert: true, autoAdvance: false, showProgressBar: true },
   };
 }
-
-/** Built-in presets keyed by id (expanded in Phase 3). */
-export const PRESETS: Record<string, ThemeTokens> = {
-  retreatAmber: RETREAT_AMBER,
-};

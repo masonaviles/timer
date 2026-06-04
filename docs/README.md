@@ -36,9 +36,10 @@ Full rationale + rejected alternatives for each in [06-DECISIONS.md](06-DECISION
 
 ## Assumptions to confirm (do not block planning, confirm before Phase 5)
 
-- **A1** — The Astro site's UI framework for islands. Doc defaults to **vanilla TS**
-  for the engine (framework-agnostic) and recommends **Preact** for the stateful builder
-  UI. Swap freely; the engine has zero framework dependencies.
+- **A1 — RESOLVED.** View layer (player + builder) uses **Preact**. Chosen for its tiny
+  footprint, React-like JSX, and first-class Astro island support. The engine/data/
+  persistence layers remain framework-free; Preact is confined to `src/view/`.
+  ([ADR-005](06-DECISIONS.md#adr-005--view-framework-preact))
 - **A2 — RESOLVED.** This `timer/` repo is the product; it ships as a **portable package**
   (working name `@masonaviles/cuestack`) that the separate Astro site repo consumes.
   Chosen because the timer will be **reused on other sites**. Host is **Netlify** (no proxy

@@ -7,7 +7,7 @@
 
 import type { EngineState, TimerConfig, Urgency } from '../data/schema.js';
 import { type Clock, type Ticker, intervalTicker, systemClock } from './clock.js';
-import { Emitter, type EngineEventMap, type StepChangeEvent } from './events.js';
+import { Emitter, type EngineEventMap, type StepChangeEvent, type TickEvent } from './events.js';
 
 export interface TimerEngineOptions {
   clock?: Clock;
@@ -47,6 +47,11 @@ export class TimerEngine extends Emitter<EngineEventMap> {
   }
   get config(): TimerConfig {
     return this.cfg;
+  }
+
+  /** Current state as a one-shot snapshot — primes a view on mount (and SSR/hydration). */
+  snapshot(): { state: EngineState; tick: TickEvent; step: StepChangeEvent } {
+    return { state: this.st, tick: this.tickPayload(), step: this.stepInfo() };
   }
 
   /** Swap in a new config and return to IDLE. Emits state/step/tick. */
@@ -162,13 +167,17 @@ export class TimerEngine extends Emitter<EngineEventMap> {
     return 'normal';
   }
 
-  private emitTick(): void {
-    this.emit('tick', {
+  private tickPayload(): TickEvent {
+    return {
       remainingSecs: this.rem,
       totalSecs: this.tot,
       fraction: this.tot > 0 ? this.rem / this.tot : 1,
       urgency: this.computeUrgency(),
       running: this.st === 'RUNNING',
-    });
+    };
+  }
+
+  private emitTick(): void {
+    this.emit('tick', this.tickPayload());
   }
 }

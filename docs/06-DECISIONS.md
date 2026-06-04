@@ -10,6 +10,7 @@ is dated and stable — supersede with a new ADR rather than rewriting history. 
 | [002](#adr-002--embedding-astro-route--island-not-iframe) | Embedding: Astro route + island, not iframe | Accepted |
 | [003](#adr-003--ad-model-pluggable-slots) | Ad model: pluggable slots (self-promo / network / none) | Accepted |
 | [004](#adr-004--repo--distribution-portable-package-consumed-by-the-astro-site) | Repo & distribution: portable package consumed by the Astro site | Accepted |
+| [005](#adr-005--view-framework-preact) | View framework: Preact | Accepted |
 
 ---
 
@@ -137,3 +138,33 @@ public-npm need none of this.
 - This repo needs package metadata before Phase 5: `exports` map (`./player`, `./builder`,
   `./engine`), `dist/` ESM build with types, shipped CSS, and release tags. Tracked in
   [phase-5-astro.md](phases/phase-5-astro.md#distribution-model-a2--resolved).
+
+---
+
+## ADR-005 — View framework: Preact
+**Date:** 2026-06-04 · **Status:** Accepted · **Resolves assumption A1**
+
+**Context.** Phase 2 introduces the view layer (player) and Phase 4 the form-heavy builder.
+A framework had to be chosen for `src/view/` only — the engine/data/persistence layers are
+framework-free by design and stay that way.
+
+**Decision.** Use **Preact** for the view layer.
+
+**Why.** Tiny (~4kb) so it barely affects the package footprint; React-like JSX is familiar
+and ergonomic for the stateful builder; first-class Astro island support via `@astrojs/preact`
+(matters for Phase 5). The engine is consumed through a thin `useEngine` hook, keeping all
+timer logic outside the framework.
+
+**Rejected.**
+- *Vanilla TS* — smallest, but the Phase 4 builder (add/edit/reorder forms) becomes manual
+  DOM + hand-rolled state; not worth it once a builder is in scope.
+- *Svelte* — excellent DX and small output, but its own `.svelte` tooling and a less familiar
+  model; Preact's JSX is closer to the team's default.
+
+**Consequences.**
+- `preact` becomes a runtime dependency; `@preact/preset-vite` + `jsdom` +
+  `@testing-library/preact` are dev dependencies for the dev server and component tests.
+- View files are `.tsx`; tsconfig sets `jsx: react-jsx`, `jsxImportSource: preact`.
+- Phase 5 adds `@astrojs/preact` to the consuming site and hydrates `<Player>` / `<Builder>`
+  as islands.
+- The engine exposes a `snapshot()` so Preact (and SSR/hydration) can prime initial state.

@@ -1,0 +1,505 @@
+/* CueStack player styles. Ported from BTMB_Retreat_Timer.html, fully tokenized.
+   Every themeable value reads a CSS custom property. The 9 colour + 3 font tokens are
+   set imperatively by ThemeProvider (applyTheme); the secondary shades below are DERIVED
+   from them so the schema stays small (Phase 3 may promote any of these to real tokens).
+   All selectors are scoped under .cuestack to prevent style bleed when embedded (ADR-002). */
+
+.cuestack {
+  /* derived secondary shades (not in the theme schema yet) */
+  --border: color-mix(in srgb, var(--text) 10%, var(--bg));
+  --border2: color-mix(in srgb, var(--text) 18%, var(--bg));
+  --dim: color-mix(in srgb, var(--muted) 72%, var(--bg));
+  --faint: color-mix(in srgb, var(--muted) 42%, var(--bg));
+
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0;
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font-body), sans-serif;
+}
+.cuestack *,
+.cuestack *::before,
+.cuestack *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+/* HEADER */
+.cs-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 13px 24px;
+  background: var(--bg2);
+  border-bottom: 0.5px solid var(--border);
+  flex-shrink: 0;
+}
+.cs-brand {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  letter-spacing: 0.18em;
+  color: var(--dim);
+  text-transform: uppercase;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.cs-brand b {
+  color: var(--accent);
+  font-weight: 500;
+}
+.cs-header-right {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.cs-status {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.12em;
+  color: var(--dim);
+  margin-right: 4px;
+}
+.cs-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--border2);
+  transition: background 0.3s, box-shadow 0.3s;
+}
+.cs-dot.running {
+  background: var(--ok);
+  box-shadow: 0 0 8px color-mix(in srgb, var(--ok) 50%, transparent);
+}
+.cs-dot.warn {
+  background: var(--warn);
+  box-shadow: 0 0 8px color-mix(in srgb, var(--warn) 50%, transparent);
+}
+.cs-dot.danger {
+  background: var(--danger);
+  box-shadow: 0 0 8px color-mix(in srgb, var(--danger) 50%, transparent);
+}
+.cs-hbtn {
+  background: transparent;
+  border: 0.5px solid var(--border2);
+  color: var(--muted);
+  padding: 8px 13px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  transition: all 0.15s;
+  white-space: nowrap;
+}
+.cs-hbtn:hover {
+  border-color: var(--accent);
+  color: var(--text);
+}
+.cs-hbtn:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+/* MAIN LAYOUT */
+.cs-main {
+  display: grid;
+  grid-template-columns: 1fr 320px;
+  flex: 1;
+  min-height: 0;
+}
+
+/* CLOCK PANEL */
+.cs-clock-panel {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 32px;
+  position: relative;
+  border-right: 0.5px solid var(--border);
+  min-width: 0;
+}
+.cs-cue-number {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.1em;
+  color: var(--faint);
+  margin-bottom: 4px;
+  min-height: 14px;
+}
+.cs-cue-label {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--dim);
+  margin-bottom: 14px;
+  text-align: center;
+  max-width: 540px;
+  transition: color 0.3s;
+}
+.cs-cue-label.active {
+  color: var(--accent);
+}
+.cs-clock {
+  font-family: var(--font-display);
+  font-size: clamp(90px, 16vw, 168px);
+  line-height: 0.9;
+  letter-spacing: 0.02em;
+  color: var(--text);
+  transition: color 0.4s;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+}
+.cs-clock.warn {
+  color: var(--warn);
+}
+.cs-clock.danger {
+  color: var(--danger);
+}
+.cs-progress-wrap {
+  width: 100%;
+  max-width: 500px;
+  height: 3px;
+  background: var(--border);
+  border-radius: 2px;
+  margin-top: 26px;
+  overflow: hidden;
+}
+.cs-progress {
+  height: 100%;
+  background: var(--ok);
+  border-radius: 2px;
+  transition: width 1s linear, background 0.4s;
+}
+.cs-progress.warn {
+  background: var(--warn);
+}
+.cs-progress.danger {
+  background: var(--danger);
+}
+.cs-controls {
+  display: flex;
+  gap: 12px;
+  margin-top: 30px;
+}
+.cs-btn {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 11px 24px;
+  border-radius: 7px;
+  border: none;
+  cursor: pointer;
+  font-family: var(--font-body);
+  font-size: 14px;
+  font-weight: 500;
+  transition: all 0.15s;
+}
+.cs-btn:active {
+  transform: scale(0.97);
+}
+.cs-btn:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+.cs-btn-start {
+  background: var(--text);
+  color: var(--bg);
+  min-width: 110px;
+  justify-content: center;
+}
+.cs-btn-start.running {
+  background: var(--accent);
+  color: #0d0e11;
+}
+.cs-btn-ghost {
+  background: transparent;
+  color: var(--muted);
+  border: 0.5px solid var(--border2);
+}
+.cs-btn-ghost:hover {
+  background: var(--surface);
+  color: var(--text);
+}
+.cs-next-hint {
+  margin-top: 18px;
+  font-size: 12px;
+  font-family: var(--font-mono);
+  color: var(--faint);
+  letter-spacing: 0.1em;
+  text-align: center;
+  min-height: 16px;
+}
+.cs-done-banner {
+  position: absolute;
+  bottom: 70px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: var(--ok);
+  color: #0d0e11;
+  font-family: var(--font-mono);
+  font-size: 13px;
+  letter-spacing: 0.18em;
+  padding: 10px 28px;
+  border-radius: 6px;
+  text-transform: uppercase;
+  font-weight: 500;
+}
+
+/* SIDE PANEL */
+.cs-side {
+  display: flex;
+  flex-direction: column;
+  background: var(--bg2);
+  overflow: hidden;
+}
+.cs-cue-head {
+  padding: 15px 18px 13px;
+  border-bottom: 0.5px solid var(--border);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-shrink: 0;
+}
+.cs-cue-head-title {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--dim);
+}
+.cs-cue-total {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--faint);
+}
+.cs-cue-list {
+  flex: 1;
+  overflow-y: auto;
+  padding: 6px 8px;
+  list-style: none;
+}
+.cs-cue-list::-webkit-scrollbar {
+  width: 3px;
+}
+.cs-cue-list::-webkit-scrollbar-thumb {
+  background: var(--border2);
+  border-radius: 2px;
+}
+.cs-cue-item {
+  display: grid;
+  grid-template-columns: 22px 1fr auto;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  text-align: left;
+  padding: 10px 12px;
+  border-radius: 6px;
+  margin-bottom: 2px;
+  border: 0.5px solid transparent;
+  background: transparent;
+  color: inherit;
+  font-family: var(--font-body);
+  cursor: pointer;
+  transition: all 0.12s;
+}
+.cs-cue-item:hover {
+  background: var(--surface);
+  border-color: var(--border2);
+}
+.cs-cue-item:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
+}
+.cs-cue-item.active {
+  background: var(--surface);
+  border-color: var(--accent);
+}
+.cs-cue-n {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  color: var(--faint);
+  text-align: right;
+}
+.cs-cue-item.active .cs-cue-n {
+  color: var(--accent);
+}
+.cs-cue-nm {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.cs-cue-item.active .cs-cue-nm {
+  color: var(--accent);
+}
+.cs-cue-d {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--dim);
+  white-space: nowrap;
+}
+.cs-empty {
+  color: var(--dim);
+  font-family: var(--font-mono);
+  font-size: 13px;
+  letter-spacing: 0.08em;
+  text-align: center;
+  padding: 30px 12px;
+  line-height: 1.6;
+}
+
+/* screen-reader-only live region */
+.cs-sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* FULLSCREEN */
+.cs-fs {
+  position: fixed;
+  inset: 0;
+  background: var(--bg);
+  z-index: 9999;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+.cs-fs-num {
+  font-family: var(--font-mono);
+  font-size: 13px;
+  letter-spacing: 0.2em;
+  color: var(--faint);
+  margin-bottom: 8px;
+}
+.cs-fs-label {
+  font-family: var(--font-mono);
+  font-size: 16px;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin-bottom: 20px;
+  text-align: center;
+  max-width: 80vw;
+}
+.cs-fs-clock {
+  font-family: var(--font-display);
+  font-size: clamp(120px, 28vw, 280px);
+  line-height: 0.85;
+  color: var(--text);
+  transition: color 0.4s;
+  letter-spacing: 0.02em;
+  font-variant-numeric: tabular-nums;
+}
+.cs-fs-clock.warn {
+  color: var(--warn);
+}
+.cs-fs-clock.danger {
+  color: var(--danger);
+}
+.cs-fs-bar-wrap {
+  width: 55vw;
+  height: 4px;
+  background: var(--surface);
+  border-radius: 2px;
+  margin-top: 44px;
+  overflow: hidden;
+}
+.cs-fs-bar {
+  height: 100%;
+  background: var(--ok);
+  border-radius: 2px;
+  transition: width 1s linear, background 0.4s;
+}
+.cs-fs-bar.warn {
+  background: var(--warn);
+}
+.cs-fs-bar.danger {
+  background: var(--danger);
+}
+.cs-fs-next {
+  position: absolute;
+  bottom: 40px;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  letter-spacing: 0.14em;
+  color: var(--border2);
+}
+.cs-fs-exit {
+  position: absolute;
+  top: 24px;
+  right: 24px;
+  background: transparent;
+  border: 0.5px solid var(--border);
+  color: var(--dim);
+  padding: 8px 16px;
+  border-radius: 5px;
+  cursor: pointer;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.12em;
+  transition: all 0.2s;
+}
+.cs-fs-exit:hover {
+  border-color: var(--accent);
+  color: var(--text);
+}
+
+/* end-of-step flash */
+@keyframes cs-flash {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.1;
+  }
+}
+.cs-flashing {
+  animation: cs-flash 0.35s ease-in-out 8;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .cs-flashing {
+    animation: none;
+  }
+  .cs-clock,
+  .cs-fs-clock,
+  .cs-progress,
+  .cs-fs-bar,
+  .cs-dot {
+    transition: none;
+  }
+}
+
+/* responsive */
+@media (max-width: 720px) {
+  .cs-main {
+    grid-template-columns: 1fr;
+    grid-template-rows: 1fr auto;
+  }
+  .cs-side {
+    border-right: none;
+    border-top: 0.5px solid var(--border);
+    max-height: 38vh;
+  }
+}

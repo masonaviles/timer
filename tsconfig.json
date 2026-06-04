@@ -6,6 +6,9 @@
     "lib": ["ES2022", "DOM", "DOM.Iterable"],
     "types": ["vitest/globals"],
 
+    "jsx": "react-jsx",
+    "jsxImportSource": "preact",
+
     "strict": true,
     "noUncheckedIndexedAccess": true,
     "noImplicitOverride": true,
